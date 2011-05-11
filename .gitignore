@@ -2,3 +2,4 @@
 dist/*
 Baudot.egg-info/*
 .coverage
+cover/*

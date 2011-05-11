@@ -6,7 +6,7 @@ setup(
     name="Baudot",
     packages=['baudot'],
     version="0.1",
-    url="http://www.baudot.org/",
+    url="https://github.com/drupal4media/baudot",
     author="Esteban Sancho",
     author_email="esteban.sancho@gmail.com"
 )
