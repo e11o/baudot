@@ -1,0 +1,4 @@
+*.pyc
+dist/*
+Baudot.egg-info/*
+.coverage
