@@ -1,5 +1,6 @@
 import unittest
 import sys, os, tempfile
+
 from md5 import md5
 from baudot.core import FileEncoder
 

@@ -11,15 +11,15 @@ class FileEncoder():
         pass
         
     def detect_encoding(self, file):
-        data = self.__getContent(file)
+        data = self.__get_content(file)
         return self.__detect(data)
 
-    def convert_encoding(self, input, output, encoding):
-        data = self.__getContent(input)
+    def convert_encoding(self, input, output, charset):
+        data = self.__get_content(input)
         detected = self.__detect(data)
         data = data.decode(detected)
         out = open(output, 'w')
-        out.write(data.encode(encoding))
+        out.write(data.encode(charset))
         out.close()
 
     def __detect(self, text):
@@ -27,7 +27,7 @@ class FileEncoder():
         m = self.detector.detect()
         return m.getName()
         
-    def __getContent(self, file):
+    def __get_content(self, file):
         f = open(file, 'r')
         data = f.read()
         f.close()
