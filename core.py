@@ -16,11 +16,12 @@ class FileEncoder():
 
     def convert_encoding(self, input, output, charset):
         data = self.__get_content(input)
-        detected = self.__detect(data)
-        data = data.decode(detected)
-        out = open(output, 'w')
-        out.write(data.encode(charset))
-        out.close()
+        if not data is None:
+            detected = self.__detect(data)
+            data = data.decode(detected).encode(charset)
+            out = open(output, 'w')
+            out.write(data)
+            out.close()
 
     def __detect(self, text):
         self.detector.setText(text)

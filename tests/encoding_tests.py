@@ -2,13 +2,13 @@ import unittest
 import sys, os, tempfile
 
 from md5 import md5
-from baudot.core import FileEncoder
+from core import FileEncoder
 
 class EncodingTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        pathname = os.path.abspath("baudot")
+        pathname = os.path.abspath(".")
         self.samples_path = os.path.join(pathname, "tests", "samples")
 
     def test_detection(self):
