@@ -2,11 +2,11 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkListStore" id="liststore1">
+  <object class="GtkListStore" id="dstStore">
     <columns>
-      <!-- column-name destination_id -->
+      <!-- column-name id -->
       <column type="gchararray"/>
-      <!-- column-name destination_name -->
+      <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
     <data>
@@ -19,6 +19,20 @@
         <col id="1" translatable="yes">Copy to folder</col>
       </row>
     </data>
+  </object>
+  <object class="GtkTreeStore" id="fileStore">
+    <columns>
+      <!-- column-name path -->
+      <column type="gchararray"/>
+      <!-- column-name size -->
+      <column type="gchararray"/>
+      <!-- column-name desc -->
+      <column type="gchararray"/>
+      <!-- column-name charset -->
+      <column type="gchararray"/>
+      <!-- column-name icon -->
+      <column type="gchararray"/>
+    </columns>
   </object>
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
@@ -33,7 +47,7 @@
         <property name="can_focus">False</property>
         <property name="spacing">1</property>
         <child>
-          <object class="GtkMenuBar" id="menuBar">
+          <object class="GtkMenuBar" id="menubar">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
@@ -78,6 +92,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_addMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -93,6 +108,23 @@
                     <child>
                       <object class="GtkImageMenuItem" id="selectAllMenuItem">
                         <property name="label">gtk-select-all</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_action_appearance">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="separator">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_action_appearance">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="prefsMenuItem">
+                        <property name="label">gtk-preferences</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_action_appearance">False</property>
@@ -142,13 +174,14 @@
             <property name="border_width">1</property>
             <property name="toolbar_style">icons</property>
             <child>
-              <object class="GtkToolButton" id="addButton">
+              <object class="GtkToolButton" id="addBtn">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">Add</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-add</property>
+                <signal name="clicked" handler="on_addBtn_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -156,8 +189,9 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolButton" id="removeButton">
+              <object class="GtkToolButton" id="removeBtn">
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">Remove</property>
@@ -180,10 +214,62 @@
           <object class="GtkTreeView" id="fileView">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="border_width">1</property>
-            <property name="reorderable">True</property>
-            <property name="enable_grid_lines">vertical</property>
-            <property name="enable_tree_lines">True</property>
+            <property name="model">fileStore</property>
+            <child>
+              <object class="GtkTreeViewColumn" id="pathColumn">
+                <property name="resizable">True</property>
+                <property name="title" translatable="yes">Files</property>
+                <property name="expand">True</property>
+                <child>
+                  <object class="GtkCellRendererPixbuf" id="fileIconRenderer"/>
+                  <attributes>
+                    <attribute name="icon-name">4</attribute>
+                  </attributes>
+                </child>
+                <child>
+                  <object class="GtkCellRendererText" id="pathRenderer"/>
+                  <attributes>
+                    <attribute name="text">0</attribute>
+                  </attributes>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeViewColumn" id="sizeColumn">
+                <property name="resizable">True</property>
+                <property name="title" translatable="yes">Size</property>
+                <child>
+                  <object class="GtkCellRendererText" id="sizeRenderer"/>
+                  <attributes>
+                    <attribute name="text">1</attribute>
+                  </attributes>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeViewColumn" id="descColumn">
+                <property name="resizable">True</property>
+                <property name="title" translatable="yes">Description</property>
+                <child>
+                  <object class="GtkCellRendererText" id="descRenderer"/>
+                  <attributes>
+                    <attribute name="text">2</attribute>
+                  </attributes>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeViewColumn" id="charsetColumn">
+                <property name="resizable">True</property>
+                <property name="title" translatable="yes">Charset</property>
+                <child>
+                  <object class="GtkCellRendererText" id="charsetRenderer"/>
+                  <attributes>
+                    <attribute name="text">3</attribute>
+                  </attributes>
+                </child>
+              </object>
+            </child>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -195,15 +281,17 @@
           <object class="GtkHBox" id="hbox1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="border_width">4</property>
+            <property name="spacing">5</property>
             <child>
-              <object class="GtkComboBox" id="destinationCombo">
+              <object class="GtkComboBox" id="dstCmb">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="model">liststore1</property>
+                <property name="model">dstStore</property>
                 <property name="active">0</property>
                 <signal name="changed" handler="on_destinationCombo_changed" swapped="no"/>
                 <child>
-                  <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                  <object class="GtkCellRendererText" id="dstCellRenderer"/>
                   <attributes>
                     <attribute name="text">1</attribute>
                   </attributes>
@@ -212,12 +300,11 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="padding">3</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkFileChooserButton" id="destinationFileChooser">
+              <object class="GtkFileChooserButton" id="dstFileChooser">
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can_focus">False</property>
@@ -227,7 +314,6 @@
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="padding">3</property>
                 <property name="pack_type">end</property>
                 <property name="position">1</property>
               </packing>
@@ -243,44 +329,43 @@
           <object class="GtkHBox" id="hbox2">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="border_width">4</property>
+            <property name="spacing">5</property>
             <child>
-              <object class="GtkLabel" id="charsetLabel">
+              <object class="GtkLabel" id="charsetLbl">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Encode to:</property>
+                <property name="label" translatable="yes">Convert to:</property>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="padding">3</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="charsetCombo">
+              <object class="GtkComboBox" id="charsetCmb">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="padding">2</property>
                 <property name="position">1</property>
               </packing>
             </child>
             <child>
               <object class="GtkButton" id="executeBtn">
-                <property name="label">gtk-execute</property>
+                <property name="label">Run</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="use_action_appearance">False</property>
-                <property name="use_stock">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="padding">3</property>
                 <property name="position">2</property>
               </packing>
             </child>
