@@ -40,7 +40,6 @@
     <property name="title" translatable="yes">Baudot</property>
     <property name="default_width">800</property>
     <property name="default_height">600</property>
-    <signal name="destroy" handler="on_window_destroy" swapped="no"/>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
@@ -55,7 +54,6 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">_File</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="fileMenu">
                     <property name="visible">True</property>
@@ -79,7 +77,6 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">_Edit</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="menu2">
                     <property name="visible">True</property>
@@ -92,7 +89,6 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="on_addMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -141,7 +137,6 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">_Help</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="menu3">
                     <property name="visible">True</property>
@@ -181,7 +176,6 @@
                 <property name="label" translatable="yes">Add</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-add</property>
-                <signal name="clicked" handler="on_addBtn_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -215,6 +209,8 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="model">fileStore</property>
+            <property name="headers_clickable">False</property>
+            <property name="search_column">0</property>
             <child>
               <object class="GtkTreeViewColumn" id="pathColumn">
                 <property name="resizable">True</property>
@@ -289,7 +285,6 @@
                 <property name="can_focus">False</property>
                 <property name="model">dstStore</property>
                 <property name="active">0</property>
-                <signal name="changed" handler="on_destinationCombo_changed" swapped="no"/>
                 <child>
                   <object class="GtkCellRendererText" id="dstCellRenderer"/>
                   <attributes>
