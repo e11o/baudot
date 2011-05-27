@@ -29,17 +29,37 @@ class MainWindow(object):
     def __init__(self):
         self.encoder = FileEncoder()
         self.file_manager = FileManager(self.encoder)
+
         builder = gtk.Builder()
         builder.add_from_file("glade/window.glade")
         builder.connect_signals(self)
+
         self.win = builder.get_object("window")
         self.dst_chooser = builder.get_object("dstFileChooser")
         self.remove_btn = builder.get_object("removeBtn")
+
         tree = builder.get_object("fileView")
         self.selection = tree.get_selection()
         self.selection.connect('changed', self.on_selection_changed)
         # TODO: review is this is the best approach
         tree.set_model(self.file_manager)
+
+        self.charset_cmb = builder.get_object("charsetCmb")
+        cell = gtk.CellRendererText()
+        self.charset_cmb.pack_start(cell, True)
+        self.charset_cmb.add_attribute(cell, 'text', 0)
+        self.charset_cmb.set_model(self.create_charset_model())
+        self.charset_cmb.set_active(0)
+
+    def create_charset_model(self):
+        encodings = self.encoder.get_available_encodings()
+        store = gtk.ListStore(gobject.TYPE_STRING)
+        loaded = list()
+        for encoding in encodings:
+            if encoding not in loaded:
+                store.append((encoding,))
+                loaded.append(encoding)
+        return store
 
     def on_selection_changed(self, selection):
         (model, paths) = selection.get_selected_rows()
