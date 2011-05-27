@@ -34,10 +34,19 @@ class MainWindow(object):
         builder.connect_signals(self)
         self.win = builder.get_object("window")
         self.dst_chooser = builder.get_object("dstFileChooser")
-
-        # TODO: review is this is the best approach
+        self.remove_btn = builder.get_object("removeBtn")
         tree = builder.get_object("fileView")
+        self.selection = tree.get_selection()
+        self.selection.connect('changed', self.on_selection_changed)
+        # TODO: review is this is the best approach
         tree.set_model(self.file_manager)
+
+    def on_selection_changed(self, selection):
+        (model, paths) = selection.get_selected_rows()
+        if paths:
+            self.remove_btn.set_sensitive(True)
+        else:
+            self.remove_btn.set_sensitive(False)
 
     def on_addBtn_clicked(self, widget, data=None):
         chooser = FileDirChooser()
@@ -49,6 +58,11 @@ class MainWindow(object):
                 self.file_manager.add_file(file)
         else:
             chooser.close()
+
+    def on_removeBtn_clicked(self, widget, data=None):
+        (model, paths) = self.selection.get_selected_rows()
+        for path in paths:
+            self.file_manager.remove(self.file_manager.get_iter(path))
 
     def on_addMenuItem_activate(self, widget, data=None):
         self.on_addBtn_clicked(widget, data)
@@ -90,6 +104,7 @@ class FileManager(gtk.TreeStore):
 
     def add_file(self, path, parent=None):
         filename = path if parent is None else os.path.basename(path)
+
         if os.path.isdir(path):
             it = self.append(parent, (path, "folder", filename, 0, "Folder", None))
 
