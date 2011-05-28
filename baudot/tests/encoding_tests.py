@@ -1,27 +1,27 @@
 import unittest
 import sys, os, tempfile
-
 from md5 import md5
-from core import FileEncoder
+from pkg_resources import resource_filename
+
+from baudot.core import FileEncoder
 
 class EncodingTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        pathname = os.path.abspath(".")
-        self.samples_path = os.path.join(pathname, "tests", "samples")
+        self.samples_package = "baudot.tests.encoding_tests"
 
     def test_detection(self):
-        file = os.path.join(self.samples_path, "sample1-ISO-8859-1.txt")
+        file = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")
         self.assertEquals("ISO-8859-1", self.encoder.detect_encoding(file))
-        file = os.path.join(self.samples_path, "sample1-UTF-8.txt")
+        file = resource_filename(self.samples_package, "samples/sample1-UTF-8.txt")
         self.assertEquals("UTF-8", self.encoder.detect_encoding(file))
-        
+
     def test_convertion_from_iso_to_utf(self):
         # setup files
-        iso = os.path.join(self.samples_path, "sample1-ISO-8859-1.txt")
+        iso = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")
         iso_checksum = self.__checksum(iso)
-        utf = os.path.join(self.samples_path, "sample1-UTF-8.txt")
+        utf = resource_filename(self.samples_package, "samples/sample1-UTF-8.txt")
         utf_checksum = self.__checksum(utf)
         # create temp file
         f = tempfile.NamedTemporaryFile(delete=False)
@@ -37,7 +37,7 @@ class EncodingTest(unittest.TestCase):
         # validate output
         self.assertNotEquals(iso_checksum, temp_checksum)
         self.assertEquals(temp_checksum, utf_checksum)
-        
+
     def __checksum(self, file):
         block_size = 0x10000
         def upd(m, data):
