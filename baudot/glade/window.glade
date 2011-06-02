@@ -2,6 +2,22 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy project-wide -->
+  <object class="GtkAction" id="addAction">
+    <property name="label" translatable="yes">Add</property>
+    <property name="stock_id">gtk-add</property>
+    <signal name="activate" handler="on_addAction_activate" swapped="no"/>
+  </object>
+  <object class="GtkAction" id="convertAction">
+    <property name="label" translatable="yes">Convert</property>
+    <property name="stock_id">gtk-convert</property>
+    <signal name="activate" handler="on_convertAction_activate" swapped="no"/>
+  </object>
+  <object class="GtkAction" id="editCharsetAction">
+    <property name="label" translatable="yes">Edit charset</property>
+    <property name="stock_id">gtk-edit</property>
+    <property name="sensitive">False</property>
+    <signal name="activate" handler="on_editCharsetAction_activate" swapped="no"/>
+  </object>
   <object class="GtkListStore" id="dstStore">
     <columns>
       <!-- column-name id -->
@@ -36,6 +52,17 @@
       <column type="gchararray"/>
     </columns>
   </object>
+  <object class="GtkAction" id="removeAction">
+    <property name="label" translatable="yes">Remove</property>
+    <property name="stock_id">gtk-remove</property>
+    <property name="sensitive">False</property>
+    <signal name="activate" handler="on_removeAction_activate" swapped="no"/>
+  </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-missing-image</property>
+  </object>
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -57,6 +84,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">File</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="fileMenu">
                     <property name="visible">True</property>
@@ -69,6 +97,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_quitMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -80,39 +109,36 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">Edit</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="menu2">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
                       <object class="GtkImageMenuItem" id="addMenuItem">
-                        <property name="label">gtk-add</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="use_underline">True</property>
+                        <property name="related_action">addAction</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate" handler="on_addMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="removeMenuItem">
-                        <property name="label">gtk-remove</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="use_underline">True</property>
+                        <property name="related_action">removeAction</property>
                         <property name="use_stock">True</property>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="selectAllMenuItem">
-                        <property name="label">gtk-select-all</property>
+                      <object class="GtkImageMenuItem" id="removeAllMenuItem">
+                        <property name="label">Remove All</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_action_appearance">False</property>
-                        <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
+                        <property name="image">image1</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_removeAllMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -141,18 +167,20 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">Help</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="menu3">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkImageMenuItem" id="imagemenuitem10">
+                      <object class="GtkImageMenuItem" id="aboutMenuItem">
                         <property name="label">gtk-about</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_aboutMenuItem_activate" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -176,11 +204,9 @@
               <object class="GtkToolButton" id="addBtn">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="use_action_appearance">False</property>
+                <property name="related_action">addAction</property>
                 <property name="label" translatable="yes">Add</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-add</property>
-                <signal name="clicked" handler="on_addBtn_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -190,13 +216,34 @@
             <child>
               <object class="GtkToolButton" id="removeBtn">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">False</property>
-                <property name="use_action_appearance">False</property>
+                <property name="related_action">removeAction</property>
                 <property name="label" translatable="yes">Remove</property>
                 <property name="use_underline">True</property>
-                <property name="stock_id">gtk-remove</property>
-                <signal name="clicked" handler="on_removeBtn_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparatorToolItem" id="separator1">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="use_action_appearance">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="editCharsetBtn">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="related_action">editCharsetAction</property>
+                <property name="label" translatable="yes">Edit Encoding</property>
+                <property name="use_underline">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -357,13 +404,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="executeBtn">
-                <property name="label">Run</property>
+              <object class="GtkButton" id="convertBtn">
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">False</property>
+                <property name="related_action">convertAction</property>
+                <property name="use_stock">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>

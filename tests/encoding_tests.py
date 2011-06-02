@@ -9,7 +9,7 @@ class EncodingTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        self.samples_package = "baudot.tests.encoding_tests"
+        self.samples_package = "tests.encoding_tests"
 
     def test_detection(self):
         file = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")
@@ -24,16 +24,16 @@ class EncodingTest(unittest.TestCase):
         utf = resource_filename(self.samples_package, "samples/sample1-UTF-8.txt")
         utf_checksum = self.__checksum(utf)
         # create temp file
-        f = tempfile.NamedTemporaryFile(delete=False)
-        f.close()
-        temp_checksum = self.__checksum(f.name)
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp.close()
+        temp_checksum = self.__checksum(temp.name)
         # validate before convertion
         self.assertNotEquals(iso_checksum, utf_checksum)
         self.assertNotEquals(temp_checksum, utf_checksum)
         self.assertNotEquals(iso_checksum, temp_checksum)
         # convert files
-        self.encoder.convert_encoding(iso, f.name, "UTF-8")
-        temp_checksum = self.__checksum(f.name)
+        self.encoder.convert_encoding(iso, temp.name, "ISO-8859-1", "UTF-8")
+        temp_checksum = self.__checksum(temp.name)
         # validate output
         self.assertNotEquals(iso_checksum, temp_checksum)
         self.assertEquals(temp_checksum, utf_checksum)

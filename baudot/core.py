@@ -1,4 +1,4 @@
-from icu import CharsetDetector, CharsetMatch
+from icu import CharsetDetector, CharsetMatch, UnicodeString
 
 class FileEncoder():
     '''
@@ -8,22 +8,25 @@ class FileEncoder():
         self.detector = CharsetDetector()
 
     def get_available_encodings(self):
-        return self.detector.getAllDetectableCharsets()
+        # remove duplicated charsets
+        seen = set()
+        seen_add = seen.add
+        return [ x for x in self.detector.getAllDetectableCharsets()
+                if x not in seen and not seen_add(x)]
 
-    def detect_encoding(self, file):
-        data = self.__get_content(file)
-        return self.__detect(data)
+    def detect_encoding(self, src_file):
+        data = self.__get_content(src_file)
+        return self.detect(data)
 
-    def convert_encoding(self, input, output, charset):
-        data = self.__get_content(input)
-        if not data is None:
-            detected = self.__detect(data)
-            data = data.decode(detected).encode(charset)
-            out = open(output, 'w')
-            out.write(data)
+    def convert_encoding(self, src_file, dst_file, src_charset, dst_charset):
+        data = self.__get_content(src_file)
+        if data:
+            encoded = UnicodeString(data, src_charset).encode(dst_charset)
+            out = open(dst_file, 'w')
+            out.write(encoded)
             out.close()
 
-    def __detect(self, text):
+    def detect(self, text):
         self.detector.setText(text)
         m = self.detector.detect()
         return m.getName()
