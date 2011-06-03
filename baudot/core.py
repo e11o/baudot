@@ -1,4 +1,5 @@
 from icu import CharsetDetector, CharsetMatch, UnicodeString
+import path
 
 class FileEncoder():
     '''
@@ -15,24 +16,19 @@ class FileEncoder():
                 if x not in seen and not seen_add(x)]
 
     def detect_encoding(self, src_file):
-        data = self.__get_content(src_file)
+        src_file = path.path(src_file)
+        data = src_file.bytes()
         return self.detect(data)
 
     def convert_encoding(self, src_file, dst_file, src_charset, dst_charset):
-        data = self.__get_content(src_file)
+        src_file = path.path(src_file)
+        dst_file = path.path(dst_file)
+        data = src_file.bytes()
         if data:
             encoded = UnicodeString(data, src_charset).encode(dst_charset)
-            out = open(dst_file, 'w')
-            out.write(encoded)
-            out.close()
+            dst_file.write_bytes(encoded)
 
     def detect(self, text):
         self.detector.setText(text)
         m = self.detector.detect()
         return m.getName()
-
-    def __get_content(self, file):
-        f = open(file, 'r')
-        data = f.read()
-        f.close()
-        return data

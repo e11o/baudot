@@ -36,11 +36,11 @@ class FileManagerTest(unittest.TestCase):
 
         dir_row = self.fm.search(dir)
         self.assertIsNotNone(dir_row)
-        self.assertEqual(5, len(dir.listdir()))
+        self.assertEqual(6, len(dir.listdir()))
         self.assertEqual(dir, dir_row[0])
         self.assertEqual("folder", dir_row[1])
         self.assertEqual(dir, dir_row[2])
-        self.assertEqual("3 items", dir_row[3])
+        self.assertEqual("4 items", dir_row[3])
         self.assertEqual("Folder", dir_row[4])
         self.assertIsNone(dir_row[5])
         

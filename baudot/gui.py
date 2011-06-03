@@ -2,13 +2,14 @@
 
 VERSION = "0.1"
 
-from icu import UnicodeString
-import gobject
 import logging
+import tempfile
 
-import magic
+import gobject
 import gtk
+import magic
 import path
+from icu import UnicodeString
 
 from core import FileEncoder
 
@@ -75,7 +76,7 @@ class MainWindow(object):
         else:
             self.remove_action.set_sensitive(True)
             file = path.path(model.get_value(iter, 0))
-            self.edit_charset_action.set_sensitive(path.isfile())
+            self.edit_charset_action.set_sensitive(file.isfile())
 
     def on_convertAction_activate(self, date=None):
         #TODO: show progress dialog
@@ -92,7 +93,10 @@ class MainWindow(object):
             file = path.path(chooser.get_selection())
             chooser.destroy()
             #TODO: show progress
-            self.file_manager.add_file(file)
+            try:
+                self.file_manager.add_file(file)
+            except DuplicatedFileException as e:
+                gtk_error_msg(self.win, "File already for processing")
         else:
             chooser.destroy()
 
@@ -172,14 +176,18 @@ class FileManager(gtk.TreeStore):
                     if copy_to:
                         if not base_path: base_path = src_file.dirname()
                         dst_file = copy_to / src_file[len(base_path)+1:]
-                    else:
-                        self._create_backup(src_file)
+                    if dst_file.exists():
+                        self._create_backup(dst_file)
+                    fd, filename = tempfile.mkstemp(prefix="baudot")
+                    tmp_file = path.path(filename)
                     log.debug("Saving file %s with charset %s" % 
-                              (dst_file, dst_charset))
+                              (tmp_file, dst_charset))
                     self.encoder.convert_encoding(src_file, 
-                                                  dst_file, 
+                                                  tmp_file, 
                                                   src_charset, 
                                                   dst_charset)
+                    tmp_file.copyfile(dst_file)
+                    tmp_file.remove()
                 else: # isdir
                     children = row.iterchildren()
                     if copy_to:
@@ -200,9 +208,9 @@ class FileManager(gtk.TreeStore):
         if file.isdir():
             row = (file, "folder", filename, 0, "Folder", None)
             it = self.append(parent, row)
-            for d in file.walkdirs():
+            for d in file.dirs():
                 self.add_file(d, it)
-            for f in file.walkfiles():
+            for f in file.files():
                 self.add_file(f, it)
             # remove empty or set size
             size = self.iter_n_children(it)
@@ -224,6 +232,9 @@ class FileManager(gtk.TreeStore):
                 row = (file, "text-x-script", filename, size, filetype, charset)
                 self.append(parent, row)
 
+    def _create_backup(self, file):
+        file.copy2(file + "~")
+    
     def _normalize(self, file):
         # TODO: remove if not used anymore
         file = path.path(file)
@@ -232,6 +243,7 @@ class FileManager(gtk.TreeStore):
         return file
     
     def _get_filetype(self, path):
+        # TODO: improve recognition (missing UTF-8 files converted to ISO-8859-1)
         ms = magic.open(magic.MAGIC_NONE)
         ms.load()
         type = ms.file(path)
@@ -267,7 +279,7 @@ class FileDirChooser(object):
     def run(self):
         response = self.dialog.run()
         if  response == gtk.RESPONSE_OK:
-            self.selection = self.dialog.get_filenames()
+            self.selection = self.dialog.get_filename()
         return response
 
     def get_selection(self):
@@ -332,7 +344,7 @@ class CharsetChooser(object):
             text = unicode(UnicodeString(self.data, charset))
             self.text_buffer.set_text(text)
         except Exception as e:
-            gtk_error_msg(None, str(e))
+            gtk_error_msg(self.dialog, str(e))
     
     def destroy(self):
         self.dialog.destroy()
