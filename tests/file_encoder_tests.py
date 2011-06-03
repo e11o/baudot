@@ -9,7 +9,7 @@ class FileEncoderTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        self.samples_package = "tests.encoding_tests"
+        self.samples_package = "tests.file_encoder_tests"
 
     def test_detection(self):
         file = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")

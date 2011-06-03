@@ -135,7 +135,30 @@ class MainWindow(object):
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
 
+#--------------------------------------------------------
+# FileEntry class
+#--------------------------------------------------------
+class FileEntry(object):
+    
+    def __init__(self, filepath=None, icon=None, filename=None, 
+                 size=None, description=None, charset=None):
+        self.filepath = path.path(filepath)
+        self.icon = icon
+        self.filename = filename
+        self.size = size
+        self.description = description
+        self.charset = charset
+    
+    def to_row(self):
+        return [self.filepath, self.icon, self.filename, self.size, 
+                    self.description, self.charset]
 
+    @staticmethod
+    def from_row(row):
+        filepath, icon, filename, size, description, charset = row
+        return FileEntry(filepath, icon, filename, size, description, charset)
+
+    
 #--------------------------------------------------------
 # FileManager class
 #--------------------------------------------------------
@@ -156,9 +179,10 @@ class FileManager(gtk.TreeStore):
         def search(rows, path):
             if not rows: return None
             for row in rows:
-                if row[0] == path:
+                entry = FileEntry.from_row(row)
+                if entry.filepath == path:
                     return row
-                if path.startswith(row[0]):
+                if path.startswith(entry.filepath):
                     result = search(row.iterchildren(), path)
                     if result: return result
             return None
@@ -170,9 +194,10 @@ class FileManager(gtk.TreeStore):
         def convert(rows, base_path):
             if not rows: return
             for row in rows:
-                src_file = dst_file = path.path(row[0])
+                entry = FileEntry.from_row(row)
+                src_file = dst_file = entry.filepath
                 if src_file.isfile():
-                    src_charset = row[5]
+                    src_charset = entry.charset
                     if copy_to:
                         if not base_path: base_path = src_file.dirname()
                         dst_file = copy_to / src_file[len(base_path)+1:]
@@ -206,8 +231,8 @@ class FileManager(gtk.TreeStore):
         
         filename = file if parent is None else file.basename()
         if file.isdir():
-            row = (file, "folder", filename, 0, "Folder", None)
-            it = self.append(parent, row)
+            entry = FileEntry(file, "folder", filename, 0, "Folder")
+            it = self.append(parent, entry.to_row())
             for d in file.dirs():
                 self.add_file(d, it)
             for f in file.files():
@@ -229,8 +254,9 @@ class FileManager(gtk.TreeStore):
                     size = "%.2f KB" % (file.size / 1000.0)
                 else:
                     size = "%.2f MB" % (file.size / 1000000.0)
-                row = (file, "text-x-script", filename, size, filetype, charset)
-                self.append(parent, row)
+                entry = FileEntry(file, "text-x-script", filename, size, 
+                                  filetype, charset)
+                self.append(parent, entry.to_row())
 
     def _create_backup(self, file):
         file.copy2(file + "~")
@@ -250,9 +276,6 @@ class FileManager(gtk.TreeStore):
         ms.close()
         return type
         
-class DuplicatedFileException(Exception):
-    pass
-
 #--------------------------------------------------------
 # FileDirChooser class
 #--------------------------------------------------------
@@ -349,6 +372,12 @@ class CharsetChooser(object):
     def destroy(self):
         self.dialog.destroy()
 
+
+#--------------------------------------------------------
+# EXCEPTIONS
+#--------------------------------------------------------
+class DuplicatedFileException(Exception):
+    pass
 
 #--------------------------------------------------------
 # HELPER FUNCTIONS
