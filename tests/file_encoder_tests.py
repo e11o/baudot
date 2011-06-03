@@ -5,7 +5,7 @@ from pkg_resources import resource_filename
 
 from baudot.core import FileEncoder
 
-class EncodingTest(unittest.TestCase):
+class FileEncoderTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
@@ -37,6 +37,12 @@ class EncodingTest(unittest.TestCase):
         # validate output
         self.assertNotEquals(iso_checksum, temp_checksum)
         self.assertEquals(temp_checksum, utf_checksum)
+
+    def test_get_available_encodings(self):
+        available = self.encoder.get_available_encodings()
+        self.assertIn("UTF-8", available)
+        self.assertIn("ISO-8859-1", available)
+        self.assertIn("windows-1251", available)
 
     def __checksum(self, file):
         block_size = 0x10000

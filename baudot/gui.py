@@ -1,12 +1,14 @@
+# -*- coding: UTF-8 -*-
+
 VERSION = "0.1"
 
 from icu import UnicodeString
-import os.path
 import gobject
 import logging
 
 import magic
 import gtk
+import path
 
 from core import FileEncoder
 
@@ -72,24 +74,25 @@ class MainWindow(object):
             self.remove_action.set_sensitive(False)
         else:
             self.remove_action.set_sensitive(True)
-            path = model.get_value(iter, 0)
-            self.edit_charset_action.set_sensitive(os.path.isfile(path))
+            file = path.path(model.get_value(iter, 0))
+            self.edit_charset_action.set_sensitive(path.isfile())
 
     def on_convertAction_activate(self, date=None):
+        #TODO: show progress dialog
         model = self.charset_cmb.get_model()
         (dst_charset,) = model.get(self.charset_cmb.get_active_iter(), 0)
         copy = self.dst_cmb.get_active() == 1
         copy_to = self.dst_chooser.get_filename() if copy else None
         self.file_manager.convert_files(dst_charset, copy_to)
+        #TODO: update files in view
 
     def on_addAction_activate(self, data=None):
         chooser = FileDirChooser()
         if chooser.run() == gtk.RESPONSE_OK:
-            files = chooser.get_selection()
+            file = path.path(chooser.get_selection())
             chooser.destroy()
-            #TODO: show "in progress" dialog
-            for file in files:
-                self.file_manager.add_file(file)
+            #TODO: show progress
+            self.file_manager.add_file(file)
         else:
             chooser.destroy()
 
@@ -144,8 +147,8 @@ class FileManager(gtk.TreeStore):
                                         gobject.TYPE_STRING)
         self.encoder = encoder
     
-    def search(self, path):
-        path = path.strip()
+    def search(self, file):
+        file = path.path(file)
         def search(rows, path):
             if not rows: return None
             for row in rows:
@@ -155,41 +158,52 @@ class FileManager(gtk.TreeStore):
                     result = search(row.iterchildren(), path)
                     if result: return result
             return None
-        return search(self, path)
+        return search(self, file)
 
     def convert_files(self, dst_charset, copy_to=None, callback=None):
-        #FIXME: improve this code
+        if copy_to: copy_to = path.path(copy_to)
+        
         def convert(rows, base_path):
             if not rows: return
             for row in rows:
-                src_file = dst_file = row[0]
-                src_charset = row[5]
-                children = row.iterchildren()
-                if copy_to:
-                    if not row.parent:
-                        base_path = src_file if os.path.isdir(src_file) else os.path.basename(src_file)
-                    dst_file = os.path.join(copy_to, src_file[len(base_path)+1:])
-                if src_charset:
-                    self.encoder.convert_encoding(src_file, dst_file, src_charset, dst_charset)
-                log.debug("Saving file to: %s in charset: %s" % (dst_file, dst_charset))
-                convert(children, base_path)
+                src_file = dst_file = path.path(row[0])
+                if src_file.isfile():
+                    src_charset = row[5]
+                    if copy_to:
+                        if not base_path: base_path = src_file.dirname()
+                        dst_file = copy_to / src_file[len(base_path)+1:]
+                    else:
+                        self._create_backup(src_file)
+                    log.debug("Saving file %s with charset %s" % 
+                              (dst_file, dst_charset))
+                    self.encoder.convert_encoding(src_file, 
+                                                  dst_file, 
+                                                  src_charset, 
+                                                  dst_charset)
+                else: # isdir
+                    children = row.iterchildren()
+                    if copy_to:
+                        if not base_path: 
+                            base_path = src_file
+                        else:
+                            dst_file = copy_to / src_file[len(base_path)+1:]
+                            dst_file.makedirs()
+                    convert(children, base_path)
         convert(self, None)
 
-    def add_file(self, path, parent=None):
-        filename = path if parent is None else os.path.basename(path)
-
-        if os.path.isdir(path):
-            row = (path, "folder", filename, 0, "Folder", None)
+    def add_file(self, file, parent=None):
+        file = path.path(file)
+        if parent is None and self.search(file):
+            raise DuplicatedFileException()
+        
+        filename = file if parent is None else file.basename()
+        if file.isdir():
+            row = (file, "folder", filename, 0, "Folder", None)
             it = self.append(parent, row)
-
-            # TODO: fix children order
-            children = os.listdir(path)
-            def folders_first(p):
-                prefix = "0" if os.path.isdir(p) else "1"
-                return prefix + p
-            for child in sorted(children, key=folders_first):
-                self.add_file(os.path.join(path, child), it)
-
+            for d in file.walkdirs():
+                self.add_file(d, it)
+            for f in file.walkfiles():
+                self.add_file(f, it)
             # remove empty or set size
             size = self.iter_n_children(it)
             if size > 0 or parent is None:
@@ -197,20 +211,26 @@ class FileManager(gtk.TreeStore):
             else:
                 self.remove(it)
         else:
-            filetype = self._get_filetype(path)
+            filetype = self._get_filetype(file)
             # only allow text files
             if "text" in filetype.lower():
-                charset = self.encoder.detect_encoding(path)
-                info = os.stat(path)
-                if info.st_size < 1000:
-                    size = "%d B" % info.st_size
-                elif info.st_size < 1000000:
-                    size = "%.2f KB" % (info.st_size / 1000)
+                charset = self.encoder.detect_encoding(file)
+                if file.size < 1000:
+                    size = "%d B" % file.size
+                elif file.size < 1000000:
+                    size = "%.2f KB" % (file.size / 1000.0)
                 else:
-                    size = "%.2f MB" % (info.st_size / 1000000)
-                row = (path, "text-x-script", filename, size, filetype, charset)
+                    size = "%.2f MB" % (file.size / 1000000.0)
+                row = (file, "text-x-script", filename, size, filetype, charset)
                 self.append(parent, row)
 
+    def _normalize(self, file):
+        # TODO: remove if not used anymore
+        file = path.path(file)
+        if file.isdir():
+            file = file.normpath() + '/'
+        return file
+    
     def _get_filetype(self, path):
         ms = magic.open(magic.MAGIC_NONE)
         ms.load()
@@ -218,6 +238,8 @@ class FileManager(gtk.TreeStore):
         ms.close()
         return type
         
+class DuplicatedFileException(Exception):
+    pass
 
 #--------------------------------------------------------
 # FileDirChooser class
@@ -278,12 +300,14 @@ class InProgressDialog(object):
 #--------------------------------------------------------
 class CharsetChooser(object):
 
-    def __init__(self, path, charset):
-        self.data = self._load_data(path)
+    def __init__(self, file, charset):
+        file = path.path(file)
+        self.data = file.bytes()
+
         builder = gtk.Builder()
         builder.add_from_file("glade/encoding_chooser.glade")
         self.dialog = builder.get_object("chooser")
-        self.dialog.set_title(os.path.basename(path))
+        self.dialog.set_title(file.basename())
         self.text_buffer = builder.get_object("textView").get_buffer()
         self.charset_cmb = builder.get_object("encodingCmb")
         builder.connect_signals(self)
@@ -313,11 +337,6 @@ class CharsetChooser(object):
     def destroy(self):
         self.dialog.destroy()
 
-    def _load_data(self, path):
-        f = open(path, 'r')
-        data = f.read()
-        f.close()
-        return data
 
 #--------------------------------------------------------
 # HELPER FUNCTIONS

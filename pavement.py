@@ -47,7 +47,7 @@ setup(name="Baudot",
     url="https://github.com/drupal4media/baudot",
     packages=['baudot'],
     include_package_data=True,
-#    install_requires = ['pyicu', 'pygtk'],
+    install_requires = ['PyICU', 'path.py'],#'PyGTK', 'python-magic', 
     test_suite = 'nose.collector',
 )
 
