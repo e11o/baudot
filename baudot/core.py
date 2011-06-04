@@ -1,7 +1,7 @@
 from icu import CharsetDetector, CharsetMatch, UnicodeString
 import path
 
-class FileEncoder():
+class CharsetConverter():
     '''
     Provides all functionality for managing character encodings
     '''

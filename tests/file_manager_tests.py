@@ -4,12 +4,12 @@ from pkg_resources import resource_filename
 from path import path
 
 from baudot.gui import FileManager, DuplicatedFileException
-from baudot.core import FileEncoder
+from baudot.core import CharsetConverter
 
 class FileManagerTest(unittest.TestCase):
 
     def setUp(self):
-        self.encoder = FileEncoder()
+        self.converter = CharsetConverter()
         self.fm = FileManager()
         self.samples = path(resource_filename(__package__, "samples"))
 
@@ -78,7 +78,7 @@ class FileManagerTest(unittest.TestCase):
             self.fm.convert_files("ISO-8859-1", copy)
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())
-            self.assertEqual("ISO-8859-1", self.encoder.detect_encoding(converted))
+            self.assertEqual("ISO-8859-1", self.converter.detect_encoding(converted))
         finally:
             copy.rmtree()
     
@@ -92,7 +92,7 @@ class FileManagerTest(unittest.TestCase):
             self.fm.convert_files("ISO-8859-1")
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())
-            self.assertEqual("ISO-8859-1", self.encoder.detect_encoding(converted))
+            self.assertEqual("ISO-8859-1", self.converter.detect_encoding(converted))
         finally:
             tmp.rmtree()
             self.assertFalse(tmp.exists())

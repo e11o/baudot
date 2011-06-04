@@ -5,19 +5,19 @@ from md5 import md5
 from pkg_resources import resource_filename
 from path import path
 
-from baudot.core import FileEncoder
+from baudot.core import CharsetConverter
 
 class FileEncoderTest(unittest.TestCase):
 
     def setUp(self):
-        self.encoder = FileEncoder()
+        self.converter = CharsetConverter()
         self.samples = path(resource_filename(__package__, "samples"))
 
     def test_detection(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
-        self.assertEquals("ISO-8859-1", self.encoder.detect_encoding(file))
+        self.assertEquals("ISO-8859-1", self.converter.detect_encoding(file))
         file = self.samples / "sample1-UTF-8.txt"
-        self.assertEquals("UTF-8", self.encoder.detect_encoding(file))
+        self.assertEquals("UTF-8", self.converter.detect_encoding(file))
 
     def test_convertion_from_iso_to_utf(self):
         # setup files
@@ -34,7 +34,7 @@ class FileEncoderTest(unittest.TestCase):
         self.assertNotEquals(tmp_checksum, utf_checksum)
         self.assertNotEquals(iso_checksum, tmp_checksum)
         # convert files
-        self.encoder.convert_encoding(iso, tmp, "ISO-8859-1", "UTF-8")
+        self.converter.convert_encoding(iso, tmp, "ISO-8859-1", "UTF-8")
         tmp_checksum = self.__checksum(tmp)
         # validate output
         self.assertNotEquals(iso_checksum, tmp_checksum)
@@ -43,7 +43,7 @@ class FileEncoderTest(unittest.TestCase):
         self.assertFalse(tmp.exists())
 
     def test_get_encodings(self):
-        available = self.encoder.get_encodings()
+        available = self.converter.get_encodings()
         self.assertIn("UTF-8", available)
         self.assertIn("ISO-8859-1", available)
         self.assertIn("windows-1251", available)

@@ -1,10 +1,9 @@
-#!/usr/bin/python
 import sys
 import getopt
 import os.path
 import shutil
 
-from core import FileEncoder
+from core import CharsetConverter
 
 def main(argv):
     try:                                
@@ -47,9 +46,9 @@ def main(argv):
     if not os.path.exists(input_file):
         print "ERROR: input file does not exist"
         sys.exit(2)
-    encoder = FileEncoder()
+    converter = CharsetConverter()
     if source_encoding is None:
-        source_encoding = encoder.detect_encoding(input_file)
+        source_encoding = converter.detect_encoding(input_file)
         if source_encoding is None:
             print "ERROR: unable to detect source encoding"
             sys.exit(2)
@@ -62,7 +61,7 @@ def main(argv):
             sys.exit(2)
         if create_backup:
             shutil.copy(output_file, output_file + '~')
-    encoder.convert_encoding(input_file, output_file, target_encoding)
+    converter.convert_encoding(input_file, output_file, target_encoding)
 
 def usage():
     print '''Usage: baudot -i <input-file> -o <output-file> -t <target-encoding> [OPTIONS...]
@@ -74,6 +73,3 @@ OPTIONS:
 -t, --target-encoding   Encoding for the output file
 --no-backup             Do not create backup file if output file exists
 '''
-    
-if __name__ == "__main__":
-    main(sys.argv[1:])

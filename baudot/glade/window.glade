@@ -12,24 +12,6 @@
     <property name="stock_id">gtk-convert</property>
     <signal name="activate" handler="on_convertAction_activate" swapped="no"/>
   </object>
-  <object class="GtkListStore" id="dstStore">
-    <columns>
-      <!-- column-name id -->
-      <column type="gchararray"/>
-      <!-- column-name name -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">replace</col>
-        <col id="1" translatable="yes">Replace original</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">copy</col>
-        <col id="1" translatable="yes">Copy to folder</col>
-      </row>
-    </data>
-  </object>
   <object class="GtkAction" id="editCharsetAction">
     <property name="label" translatable="yes">Edit charset</property>
     <property name="stock_id">gtk-edit</property>
@@ -58,10 +40,27 @@
     <property name="sensitive">False</property>
     <signal name="activate" handler="on_removeAction_activate" swapped="no"/>
   </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-missing-image</property>
+  <object class="GtkAction" id="removeAll">
+    <property name="label" translatable="yes">Remove All</property>
+    <property name="stock_id">gtk-remove</property>
+  </object>
+  <object class="GtkListStore" id="dstStore">
+    <columns>
+      <!-- column-name id -->
+      <column type="gchararray"/>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0" translatable="yes">replace</col>
+        <col id="1" translatable="yes">Replace original</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">copy</col>
+        <col id="1" translatable="yes">Copy to folder</col>
+      </row>
+    </data>
   </object>
   <object class="GtkWindow" id="window">
     <property name="visible">True</property>
@@ -134,13 +133,10 @@
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="removeAllMenuItem">
-                        <property name="label">Remove All</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_action_appearance">False</property>
-                        <property name="image">image1</property>
-                        <property name="use_stock">False</property>
-                        <signal name="activate" handler="on_removeAllMenuItem_activate" swapped="no"/>
+                        <property name="related_action">removeAll</property>
+                        <property name="use_stock">True</property>
                       </object>
                     </child>
                     <child>

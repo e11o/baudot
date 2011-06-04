@@ -10,14 +10,17 @@ import gobject
 import gtk
 import magic
 from path import path
+from pkg_resources import resource_filename
 
-from core import FileEncoder
+from core import CharsetConverter
 
 logging.basicConfig()
 log = logging.getLogger("baudot_gui")
 log.setLevel(logging.DEBUG)
 
-encoder = FileEncoder()
+converter = CharsetConverter()
+
+glade_path = path(resource_filename("baudot.gui", "glade"))
 
 #--------------------------------------------------------
 # App class
@@ -38,7 +41,7 @@ class MainWindow(object):
     def __init__(self):
 
         builder = gtk.Builder()
-        builder.add_from_file("glade/window.glade")
+        builder.add_from_file(glade_path / "window.glade")
         self.win = builder.get_object("window")
         self.dst_cmb = builder.get_object("dstCmb")
         self.dst_chooser = builder.get_object("dstFileChooser")
@@ -57,7 +60,7 @@ class MainWindow(object):
         self.selection.connect('changed', self.on_selection_changed)
         tree.set_model(self.fm)
 
-        combo_from_strings(encoder.get_encodings(), self.charset_cmb, "UTF-8")
+        combo_from_strings(converter.get_encodings(), self.charset_cmb, "UTF-8")
 
     def show(self):
         self.win.show()
@@ -110,7 +113,7 @@ class MainWindow(object):
     def on_editCharsetAction_activate(self, data=None):
         (model, iter) = self.selection.get_selected()
         entry = FileEntry.from_iter(model, iter)
-        dialog = CharsetChooser(self.win, entry.filepath, entry.charset)
+        dialog = CharsetChooser(entry.filepath, entry.charset)
         if dialog.run() == gtk.RESPONSE_APPLY:
             entry.charset = dialog.get_selected_charset()
             entry.save(model, iter)
@@ -191,7 +194,7 @@ class FileEntry(object):
 #--------------------------------------------------------
 # FileManager class
 #--------------------------------------------------------
-class FileManager(gtk.TreeStore):
+class FileManager(gtk.TreeStore, object):
 
     def __init__(self):
         # path, icon, filename, size, description, charset
@@ -235,7 +238,7 @@ class FileManager(gtk.TreeStore):
                     tmp_file = path(filename)
                     log.debug("Saving file %s with charset %s" % 
                               (tmp_file, dst_charset))
-                    encoder.convert_encoding(src_file, 
+                    converter.convert_encoding(src_file, 
                                                   tmp_file, 
                                                   src_charset, 
                                                   dst_charset)
@@ -276,7 +279,7 @@ class FileManager(gtk.TreeStore):
             filetype = self._get_filetype(file)
             # only allow text files
             if "text" in filetype.lower():
-                charset = encoder.detect_encoding(file)
+                charset = converter.detect_encoding(file)
                 if file.size < 1000:
                     size = "%d B" % file.size
                 elif file.size < 1000000:
@@ -364,14 +367,13 @@ class InProgressDialog(object):
 #--------------------------------------------------------
 class CharsetChooser(object):
 
-    def __init__(self, parent, file, charset):
+    def __init__(self, file, charset):
         file = path(file)
         self.data = file.bytes()
         
         builder = gtk.Builder()
-        builder.add_from_file("glade/encoding_chooser.glade")
+        builder.add_from_file(glade_path / "charset_chooser.glade")
         self.dialog = builder.get_object("chooser")
-        self.dialog.set_parent(parent)
         self.dialog.set_title(file.basename())
         self.text_buffer = builder.get_object("textView").get_buffer()
         self.charset_cmb = builder.get_object("encodingCmb")
@@ -404,7 +406,7 @@ class CharsetChooser(object):
 
     def _get_charsets(self, data):
         good = list()
-        for charset in encoder.get_encodings():
+        for charset in converter.get_encodings():
             try:
                 unicode(data, charset)
                 good.append(charset)
@@ -446,10 +448,3 @@ def combo_from_strings(str_list, combo, default=None):
     combo.set_model(store)
     combo.set_active(index)
     
-
-#--------------------------------------------------------
-# MAIN
-#--------------------------------------------------------
-if __name__ == "__main__":
-    app = App()
-    app.start()
