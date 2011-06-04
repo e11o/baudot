@@ -8,7 +8,7 @@ class FileEncoder():
     def __init__(self):
         self.detector = CharsetDetector()
 
-    def get_available_encodings(self):
+    def get_encodings(self):
         # remove duplicated charsets
         seen = set()
         seen_add = seen.add

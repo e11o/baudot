@@ -1,7 +1,7 @@
 import unittest
-import path
 import tempfile
 from pkg_resources import resource_filename
+from path import path
 
 from baudot.gui import FileManager, DuplicatedFileException
 from baudot.core import FileEncoder
@@ -10,15 +10,14 @@ class FileManagerTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        self.fm = FileManager(self.encoder)
-        self.samples = path.path(resource_filename("tests.file_manager_tests", 
-                                                   "samples"))
+        self.fm = FileManager()
+        self.samples = path(resource_filename(__package__, "samples"))
 
     def test_normalize(self):
         self.assertEqual("/var/log/", self.fm._normalize("/var/log/"))
         self.assertEqual("/var/log/", self.fm._normalize("/var/log"))
-        self.assertEqual("/var/log/", self.fm._normalize(path.path("/var/log/")))
-        self.assertEqual("/var/log/", self.fm._normalize(path.path("/var/log/")))
+        self.assertEqual("/var/log/", self.fm._normalize(path("/var/log/")))
+        self.assertEqual("/var/log/", self.fm._normalize(path("/var/log/")))
         
     def test_get_filetype(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
@@ -72,7 +71,7 @@ class FileManagerTest(unittest.TestCase):
 
     def test_convert_copy(self):
         orig = self.samples / "dir1"
-        copy = path.path(tempfile.mkdtemp())
+        copy = path(tempfile.mkdtemp())
 
         try:
             self.fm.add_file(orig)
@@ -85,8 +84,8 @@ class FileManagerTest(unittest.TestCase):
     
     def test_convert_in_place(self):
         orig = self.samples / "dir1"
-        tmp = tempfile.mkdtemp()
-        copy = path.path(tmp) / "copy"
+        tmp = path(tempfile.mkdtemp())
+        copy = tmp / "copy"
         orig.copytree(copy)
         try:
             self.fm.add_file(copy)
@@ -95,4 +94,21 @@ class FileManagerTest(unittest.TestCase):
             self.assertTrue(converted.exists())
             self.assertEqual("ISO-8859-1", self.encoder.detect_encoding(converted))
         finally:
-            copy.rmtree(tmp)
+            tmp.rmtree()
+            self.assertFalse(tmp.exists())
+    
+    def test_create_backup(self):
+        tmp = path(tempfile.mkdtemp())
+        try:
+            orig = tmp / "orig.txt"
+            backup = tmp / "orig.txt~"
+            
+            orig.touch()
+            self.assertTrue(orig.exists())
+            self.assertFalse(backup.exists())
+            self.fm._create_backup(orig)
+            self.assertTrue(backup.exists())
+        finally:
+            tmp.rmtree()
+            self.assertFalse(tmp.exists())
+            

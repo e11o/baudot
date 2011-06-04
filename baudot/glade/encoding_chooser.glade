@@ -4,7 +4,6 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkDialog" id="chooser">
     <property name="can_focus">False</property>
-    <property name="border_width">5</property>
     <property name="modal">True</property>
     <property name="default_width">640</property>
     <property name="default_height">480</property>
@@ -13,45 +12,6 @@
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox">
         <property name="can_focus">False</property>
-        <property name="spacing">5</property>
-        <child>
-          <object class="GtkHBox" id="hbox1">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="spacing">5</property>
-            <child>
-              <object class="GtkLabel" id="charsetLbl">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Change charset:</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="pack_type">end</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkComboBox" id="encodingCmb">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <signal name="changed" handler="on_encodingCmb_changed" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="pack_type">end</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow1">
             <property name="visible">True</property>
@@ -70,13 +30,25 @@
           <packing>
             <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">1</property>
+            <property name="position">0</property>
           </packing>
         </child>
         <child internal-child="action_area">
           <object class="GtkHButtonBox" id="dialog-action_area">
             <property name="can_focus">False</property>
-            <property name="layout_style">end</property>
+            <property name="homogeneous">False</property>
+            <child>
+              <object class="GtkComboBox" id="encodingCmb">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <signal name="changed" handler="on_encodingCmb_changed" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child>
               <object class="GtkButton" id="saveBtn">
                 <property name="label">gtk-save</property>
@@ -87,9 +59,8 @@
                 <property name="use_stock">True</property>
               </object>
               <packing>
-                <property name="expand">True</property>
+                <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="pack_type">end</property>
                 <property name="position">1</property>
               </packing>
             </child>
@@ -103,9 +74,8 @@
                 <property name="use_stock">True</property>
               </object>
               <packing>
-                <property name="expand">True</property>
+                <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="pack_type">end</property>
                 <property name="position">2</property>
               </packing>
             </child>
@@ -113,15 +83,15 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="pack_type">end</property>
-            <property name="position">2</property>
+            <property name="pack_type">default</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>
     </child>
     <action-widgets>
-      <action-widget response="2">closeBtn</action-widget>
       <action-widget response="1">saveBtn</action-widget>
+      <action-widget response="2">closeBtn</action-widget>
     </action-widgets>
   </object>
 </interface>

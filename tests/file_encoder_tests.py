@@ -1,7 +1,9 @@
 import unittest
-import sys, os, tempfile
+import tempfile
+
 from md5 import md5
 from pkg_resources import resource_filename
+from path import path
 
 from baudot.core import FileEncoder
 
@@ -9,37 +11,39 @@ class FileEncoderTest(unittest.TestCase):
 
     def setUp(self):
         self.encoder = FileEncoder()
-        self.samples_package = "tests.file_encoder_tests"
+        self.samples = path(resource_filename(__package__, "samples"))
 
     def test_detection(self):
-        file = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")
+        file = self.samples / "sample1-ISO-8859-1.txt"
         self.assertEquals("ISO-8859-1", self.encoder.detect_encoding(file))
-        file = resource_filename(self.samples_package, "samples/sample1-UTF-8.txt")
+        file = self.samples / "sample1-UTF-8.txt"
         self.assertEquals("UTF-8", self.encoder.detect_encoding(file))
 
     def test_convertion_from_iso_to_utf(self):
         # setup files
-        iso = resource_filename(self.samples_package, "samples/sample1-ISO-8859-1.txt")
+        iso = self.samples / "sample1-ISO-8859-1.txt"
         iso_checksum = self.__checksum(iso)
-        utf = resource_filename(self.samples_package, "samples/sample1-UTF-8.txt")
+        utf = self.samples / "sample1-UTF-8.txt"
         utf_checksum = self.__checksum(utf)
         # create temp file
-        temp = tempfile.NamedTemporaryFile(delete=False)
-        temp.close()
-        temp_checksum = self.__checksum(temp.name)
+        fd, filename = tempfile.mkstemp(prefix="baudot")
+        tmp = path(filename)
+        tmp_checksum = self.__checksum(tmp)
         # validate before convertion
         self.assertNotEquals(iso_checksum, utf_checksum)
-        self.assertNotEquals(temp_checksum, utf_checksum)
-        self.assertNotEquals(iso_checksum, temp_checksum)
+        self.assertNotEquals(tmp_checksum, utf_checksum)
+        self.assertNotEquals(iso_checksum, tmp_checksum)
         # convert files
-        self.encoder.convert_encoding(iso, temp.name, "ISO-8859-1", "UTF-8")
-        temp_checksum = self.__checksum(temp.name)
+        self.encoder.convert_encoding(iso, tmp, "ISO-8859-1", "UTF-8")
+        tmp_checksum = self.__checksum(tmp)
         # validate output
-        self.assertNotEquals(iso_checksum, temp_checksum)
-        self.assertEquals(temp_checksum, utf_checksum)
+        self.assertNotEquals(iso_checksum, tmp_checksum)
+        self.assertEquals(tmp_checksum, utf_checksum)
+        tmp.remove()
+        self.assertFalse(tmp.exists())
 
-    def test_get_available_encodings(self):
-        available = self.encoder.get_available_encodings()
+    def test_get_encodings(self):
+        available = self.encoder.get_encodings()
         self.assertIn("UTF-8", available)
         self.assertIn("ISO-8859-1", available)
         self.assertIn("windows-1251", available)

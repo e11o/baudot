@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
 VERSION = "0.1"
@@ -8,14 +9,15 @@ import tempfile
 import gobject
 import gtk
 import magic
-import path
-from icu import UnicodeString
+from path import path
 
 from core import FileEncoder
 
 logging.basicConfig()
 log = logging.getLogger("baudot_gui")
 log.setLevel(logging.DEBUG)
+
+encoder = FileEncoder()
 
 #--------------------------------------------------------
 # App class
@@ -34,7 +36,6 @@ class App(object):
 class MainWindow(object):
 
     def __init__(self):
-        self.encoder = FileEncoder()
 
         builder = gtk.Builder()
         builder.add_from_file("glade/window.glade")
@@ -47,16 +48,16 @@ class MainWindow(object):
         self.charset_cmb = builder.get_object("charsetCmb")
         builder.connect_signals(self)
 
-        self.file_manager = FileManager(self.encoder)
-        self.file_manager.connect("row_deleted", self.on_row_deleted)
-        self.file_manager.connect("row_inserted", self.on_row_inserted)
+        self.fm = FileManager()
+        self.fm.connect("row_deleted", self.on_row_deleted)
+        self.fm.connect("row_inserted", self.on_row_inserted)
 
         tree = builder.get_object("fileView")
-        self.file_selection = tree.get_selection()
-        self.file_selection.connect('changed', self.on_selection_changed)
-        tree.set_model(self.file_manager)
+        self.selection = tree.get_selection()
+        self.selection.connect('changed', self.on_selection_changed)
+        tree.set_model(self.fm)
 
-        create_charset_model(self.charset_cmb, "UTF-8")
+        combo_from_strings(encoder.get_encodings(), self.charset_cmb, "UTF-8")
 
     def show(self):
         self.win.show()
@@ -70,51 +71,53 @@ class MainWindow(object):
             self.convert_action.set_sensitive(False)
 
     def on_selection_changed(self, selection):
-        (model, iter) = self.file_selection.get_selected()
+        (model, iter) = self.selection.get_selected()
         if iter is None:
             self.remove_action.set_sensitive(False)
+            self.edit_charset_action.set_sensitive(False)
         else:
             self.remove_action.set_sensitive(True)
-            file = path.path(model.get_value(iter, 0))
-            self.edit_charset_action.set_sensitive(file.isfile())
+            entry = FileEntry.from_iter(model, iter)
+            self.edit_charset_action.set_sensitive(entry.filepath.isfile())
 
     def on_convertAction_activate(self, date=None):
         #TODO: show progress dialog
         model = self.charset_cmb.get_model()
-        (dst_charset,) = model.get(self.charset_cmb.get_active_iter(), 0)
-        copy = self.dst_cmb.get_active() == 1
-        copy_to = self.dst_chooser.get_filename() if copy else None
-        self.file_manager.convert_files(dst_charset, copy_to)
+        dst_charset = model.get_value(self.charset_cmb.get_active_iter(), 0)
+        copy_to = None
+        if self.dst_cmb.get_active() == 1:
+            copy_to = self.dst_chooser.get_filename()
+        self.fm.convert_files(dst_charset, copy_to)
         #TODO: update files in view
 
     def on_addAction_activate(self, data=None):
         chooser = FileDirChooser()
         if chooser.run() == gtk.RESPONSE_OK:
-            file = path.path(chooser.get_selection())
+            file = chooser.get_selection()
             chooser.destroy()
             #TODO: show progress
             try:
-                self.file_manager.add_file(file)
+                self.fm.add_file(file)
             except DuplicatedFileException as e:
-                gtk_error_msg(self.win, "File already for processing")
+                gtk_error_msg(self.win, "File already for processing... skipping")
         else:
             chooser.destroy()
 
     def on_removeAction_activate(self, data=None):
-        (model, iter) = self.file_selection.get_selected()
+        (model, iter) = self.selection.get_selected()
         model.remove(iter)
 
     def on_editCharsetAction_activate(self, data=None):
-        (model, iter) = self.file_selection.get_selected()
-        path, charset = model.get(iter, 0, 5)
-        dialog = CharsetChooser(path, charset)
+        (model, iter) = self.selection.get_selected()
+        entry = FileEntry.from_iter(model, iter)
+        dialog = CharsetChooser(self.win, entry.filepath, entry.charset)
         if dialog.run() == gtk.RESPONSE_APPLY:
-            charset = dialog.get_selected_charset()
-            model.set_value(iter, 5, charset)
+            entry.charset = dialog.get_selected_charset()
+            entry.save(model, iter)
         dialog.destroy()
 
     def on_removeAllAction_activate(self, data=None):
-        self.file_manager.clear()
+        self.fm.clear()
 
     def on_aboutMenuItem_activate(self, widget, data=None):
         about = gtk.AboutDialog()
@@ -134,6 +137,7 @@ class MainWindow(object):
 
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
+    
 
 #--------------------------------------------------------
 # FileEntry class
@@ -142,40 +146,64 @@ class FileEntry(object):
     
     def __init__(self, filepath=None, icon=None, filename=None, 
                  size=None, description=None, charset=None):
-        self.filepath = path.path(filepath)
+        self.filepath = path(filepath)
         self.icon = icon
         self.filename = filename
         self.size = size
         self.description = description
         self.charset = charset
     
-    def to_row(self):
-        return [self.filepath, self.icon, self.filename, self.size, 
-                    self.description, self.charset]
-
+    def to_list(self):
+        return (self.filepath, self.icon, self.filename, self.size, 
+                    self.description, self.charset)
+    
+    def save(self, model, iter):
+        model.set_value(iter, 0, self.filepath)
+        model.set_value(iter, 1, self.icon)
+        model.set_value(iter, 2, self.filename)
+        model.set_value(iter, 3, self.size)
+        model.set_value(iter, 4, self.description)
+        model.set_value(iter, 5, self.charset)
+        
     @staticmethod
     def from_row(row):
         filepath, icon, filename, size, description, charset = row
         return FileEntry(filepath, icon, filename, size, description, charset)
 
+    @staticmethod
+    def from_iter(model, iter):
+        row = list()
+        for i in range(model.get_n_columns()):
+            row.append(model.get_value(iter, i))
+        return FileEntry.from_row(row)
+
+    # TODO: remove if unused
+    @staticmethod
+    def get_column_defs():
+        # path, icon, filename, size, description, charset
+        return(gobject.TYPE_STRING,
+               gobject.TYPE_STRING,
+               gobject.TYPE_STRING,
+               gobject.TYPE_STRING,
+               gobject.TYPE_STRING,
+               gobject.TYPE_STRING)
     
 #--------------------------------------------------------
 # FileManager class
 #--------------------------------------------------------
 class FileManager(gtk.TreeStore):
 
-    def __init__(self, encoder):
+    def __init__(self):
         # path, icon, filename, size, description, charset
         super(FileManager, self).__init__(gobject.TYPE_STRING,
-                                        gobject.TYPE_STRING,
-                                        gobject.TYPE_STRING,
-                                        gobject.TYPE_STRING,
-                                        gobject.TYPE_STRING,
-                                        gobject.TYPE_STRING)
-        self.encoder = encoder
+                                          gobject.TYPE_STRING,
+                                          gobject.TYPE_STRING,
+                                          gobject.TYPE_STRING,
+                                          gobject.TYPE_STRING,
+                                          gobject.TYPE_STRING)
     
     def search(self, file):
-        file = path.path(file)
+        file = path(file)
         def search(rows, path):
             if not rows: return None
             for row in rows:
@@ -189,7 +217,7 @@ class FileManager(gtk.TreeStore):
         return search(self, file)
 
     def convert_files(self, dst_charset, copy_to=None, callback=None):
-        if copy_to: copy_to = path.path(copy_to)
+        if copy_to: copy_to = path(copy_to)
         
         def convert(rows, base_path):
             if not rows: return
@@ -204,10 +232,10 @@ class FileManager(gtk.TreeStore):
                     if dst_file.exists():
                         self._create_backup(dst_file)
                     fd, filename = tempfile.mkstemp(prefix="baudot")
-                    tmp_file = path.path(filename)
+                    tmp_file = path(filename)
                     log.debug("Saving file %s with charset %s" % 
                               (tmp_file, dst_charset))
-                    self.encoder.convert_encoding(src_file, 
+                    encoder.convert_encoding(src_file, 
                                                   tmp_file, 
                                                   src_charset, 
                                                   dst_charset)
@@ -225,29 +253,30 @@ class FileManager(gtk.TreeStore):
         convert(self, None)
 
     def add_file(self, file, parent=None):
-        file = path.path(file)
+        file = path(file)
         if parent is None and self.search(file):
             raise DuplicatedFileException()
         
         filename = file if parent is None else file.basename()
         if file.isdir():
             entry = FileEntry(file, "folder", filename, 0, "Folder")
-            it = self.append(parent, entry.to_row())
+            it = self.append(parent, entry.to_list())
             for d in file.dirs():
                 self.add_file(d, it)
             for f in file.files():
                 self.add_file(f, it)
             # remove empty or set size
-            size = self.iter_n_children(it)
-            if size > 0 or parent is None:
-                self.set_value(it, 3, "%d items" % size)
+            count = self.iter_n_children(it)
+            if count > 0 or parent is None:
+                entry.size = "%d items" % count
+                entry.save(self, it)
             else:
                 self.remove(it)
         else:
             filetype = self._get_filetype(file)
             # only allow text files
             if "text" in filetype.lower():
-                charset = self.encoder.detect_encoding(file)
+                charset = encoder.detect_encoding(file)
                 if file.size < 1000:
                     size = "%d B" % file.size
                 elif file.size < 1000000:
@@ -256,14 +285,14 @@ class FileManager(gtk.TreeStore):
                     size = "%.2f MB" % (file.size / 1000000.0)
                 entry = FileEntry(file, "text-x-script", filename, size, 
                                   filetype, charset)
-                self.append(parent, entry.to_row())
+                self.append(parent, entry.to_list())
 
     def _create_backup(self, file):
         file.copy2(file + "~")
     
     def _normalize(self, file):
         # TODO: remove if not used anymore
-        file = path.path(file)
+        file = path(file)
         if file.isdir():
             file = file.normpath() + '/'
         return file
@@ -335,22 +364,21 @@ class InProgressDialog(object):
 #--------------------------------------------------------
 class CharsetChooser(object):
 
-    def __init__(self, file, charset):
-        file = path.path(file)
+    def __init__(self, parent, file, charset):
+        file = path(file)
         self.data = file.bytes()
-
+        
         builder = gtk.Builder()
         builder.add_from_file("glade/encoding_chooser.glade")
         self.dialog = builder.get_object("chooser")
+        self.dialog.set_parent(parent)
         self.dialog.set_title(file.basename())
         self.text_buffer = builder.get_object("textView").get_buffer()
         self.charset_cmb = builder.get_object("encodingCmb")
         builder.connect_signals(self)
         
-        text = unicode(UnicodeString(self.data, charset))
-        self.text_buffer.set_text(text)
-
-        create_charset_model(self.charset_cmb, charset)
+        combo_from_strings(self._get_charsets(self.data), self.charset_cmb, charset)
+        self.set_data(charset)
 
     def run(self):
         response = self.dialog.run()
@@ -358,20 +386,31 @@ class CharsetChooser(object):
 
     def get_selected_charset(self):
         model = self.charset_cmb.get_model()
-        (charset,) = model.get(self.charset_cmb.get_active_iter(), 0)
-        return charset
+        return model.get_value(self.charset_cmb.get_active_iter(), 0)
 
     def on_encodingCmb_changed(self, widget, data=None):
         charset = self.get_selected_charset()
-        try:
-            text = unicode(UnicodeString(self.data, charset))
-            self.text_buffer.set_text(text)
-        except Exception as e:
-            gtk_error_msg(self.dialog, str(e))
+        self.set_data(charset)
     
     def destroy(self):
         self.dialog.destroy()
 
+    def set_data(self, charset):
+        try:
+            text = unicode(self.data, charset)
+            self.text_buffer.set_text(text)
+        except Exception as e:
+            gtk_error_msg(self.dialog, str(e))
+
+    def _get_charsets(self, data):
+        good = list()
+        for charset in encoder.get_encodings():
+            try:
+                unicode(data, charset)
+                good.append(charset)
+            except:
+                pass
+        return good
 
 #--------------------------------------------------------
 # EXCEPTIONS
@@ -392,16 +431,14 @@ def gtk_error_msg(parent, message):
     md.run()
     md.destroy()
     
-def create_charset_model(combo, default=None):
-    '''Helper function to create charset combos
+def combo_from_strings(str_list, combo, default=None):
+    '''Helper function to populate a combo with a list of strings
     '''
-    encoder = FileEncoder()
-    charsets = encoder.get_available_encodings()
     store = gtk.ListStore(gobject.TYPE_STRING)
     index = -1
-    for i in range(len(charsets)):
-        store.append((charsets[i],))
-        if index < 0 and charsets[i] == default:
+    for i in range(len(str_list)):
+        store.append((str_list[i],))
+        if index < 0 and str_list[i] == default:
             index = i
     cell = gtk.CellRendererText()
     combo.pack_start(cell, True)
