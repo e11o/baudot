@@ -30,7 +30,7 @@ class FileManagerTest(unittest.TestCase):
         empty = dir / "empty"
 
         self.assertEqual(0, len(self.fm))
-        self.fm.add_file(dir)
+        self.fm.add(dir)
         self.assertEqual(1, len(self.fm))
 
         dir_row = self.fm.search(dir)
@@ -58,15 +58,15 @@ class FileManagerTest(unittest.TestCase):
         self.assertTrue(empty.exists())
         self.assertIsNone(self.fm.search(empty))
 
-        self.fm.add_file(empty)
+        self.fm.add(empty)
         self.assertEqual(2, len(self.fm))
 
     def test_add_duplicate(self):
         dir = self.samples / "dir1"
         self.assertEqual(0, len(self.fm))
-        self.fm.add_file(dir)
+        self.fm.add(dir)
         self.assertEqual(1, len(self.fm))
-        self.assertRaises(DuplicatedFileException, self.fm.add_file, dir)
+        self.assertRaises(DuplicatedFileException, self.fm.add, dir)
         self.assertEqual(1, len(self.fm))
 
     def test_convert_copy(self):
@@ -74,7 +74,7 @@ class FileManagerTest(unittest.TestCase):
         copy = path(tempfile.mkdtemp())
 
         try:
-            self.fm.add_file(orig)
+            self.fm.add(orig)
             self.fm.convert_files("ISO-8859-1", copy)
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())
@@ -88,7 +88,7 @@ class FileManagerTest(unittest.TestCase):
         copy = tmp / "copy"
         orig.copytree(copy)
         try:
-            self.fm.add_file(copy)
+            self.fm.add(copy)
             self.fm.convert_files("ISO-8859-1")
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())

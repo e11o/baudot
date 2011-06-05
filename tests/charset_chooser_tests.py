@@ -14,4 +14,5 @@ class CharsetChooserTest(unittest.TestCase):
     def test_change_charset(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
         chooser = CharsetChooser(file, "ISO-8859-1")
+        self.assertIsNotNone(chooser)
         

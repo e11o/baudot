@@ -45,24 +45,26 @@ class MainWindow(object):
         self.win = builder.get_object("window")
         self.dst_cmb = builder.get_object("dstCmb")
         self.dst_chooser = builder.get_object("dstFileChooser")
+        self.add_action = builder.get_object("addAction")
         self.remove_action = builder.get_object("removeAction")
         self.edit_charset_action = builder.get_object("editCharsetAction")
         self.convert_action = builder.get_object("convertAction")
         self.charset_cmb = builder.get_object("charsetCmb")
+        self.file_view = builder.get_object("fileView")
         builder.connect_signals(self)
 
         self.fm = FileManager()
-        self.fm.connect("row_deleted", self.on_row_deleted)
-        self.fm.connect("row_inserted", self.on_row_inserted)
+        self.fm.store.connect("row_deleted", self.on_row_deleted)
+        self.fm.store.connect("row_inserted", self.on_row_inserted)
 
-        tree = builder.get_object("fileView")
-        self.selection = tree.get_selection()
+        self.selection = self.file_view.get_selection()
         self.selection.connect('changed', self.on_selection_changed)
-        tree.set_model(self.fm)
+        self.file_view.set_model(self.fm.store)
 
         combo_from_strings(converter.get_encodings(), self.charset_cmb, "UTF-8")
 
     def show(self):
+        self.win.set_visible(True)
         self.win.show()
 
     def on_row_inserted(self, model, path, data=None):
@@ -85,8 +87,7 @@ class MainWindow(object):
 
     def on_convertAction_activate(self, date=None):
         #TODO: show progress dialog
-        model = self.charset_cmb.get_model()
-        dst_charset = model.get_value(self.charset_cmb.get_active_iter(), 0)
+        dst_charset = self.charset_cmb.get_active_text()
         copy_to = None
         if self.dst_cmb.get_active() == 1:
             copy_to = self.dst_chooser.get_filename()
@@ -100,7 +101,7 @@ class MainWindow(object):
             chooser.destroy()
             #TODO: show progress
             try:
-                self.fm.add_file(file)
+                self.fm.add(file)
             except DuplicatedFileException as e:
                 gtk_error_msg(self.win, "File already for processing... skipping")
         else:
@@ -194,16 +195,24 @@ class FileEntry(object):
 #--------------------------------------------------------
 # FileManager class
 #--------------------------------------------------------
-class FileManager(gtk.TreeStore, object):
+class FileManager(object):
 
     def __init__(self):
         # path, icon, filename, size, description, charset
-        super(FileManager, self).__init__(gobject.TYPE_STRING,
-                                          gobject.TYPE_STRING,
-                                          gobject.TYPE_STRING,
-                                          gobject.TYPE_STRING,
-                                          gobject.TYPE_STRING,
-                                          gobject.TYPE_STRING)
+        self.store = gtk.TreeStore(gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING)
+    def __len__(self):
+        return len(self.store)
+    
+    def clear(self):
+        self.store.clear()
+        
+    def iter_remove(self, iter):
+        return self.store.remove(iter)
     
     def search(self, file):
         file = path(file)
@@ -217,7 +226,7 @@ class FileManager(gtk.TreeStore, object):
                     result = search(row.iterchildren(), path)
                     if result: return result
             return None
-        return search(self, file)
+        return search(self.store, file)
 
     def convert_files(self, dst_charset, copy_to=None, callback=None):
         if copy_to: copy_to = path(copy_to)
@@ -253,9 +262,9 @@ class FileManager(gtk.TreeStore, object):
                             dst_file = copy_to / src_file[len(base_path)+1:]
                             dst_file.makedirs()
                     convert(children, base_path)
-        convert(self, None)
+        convert(self.store, None)
 
-    def add_file(self, file, parent=None):
+    def add(self, file, parent=None):
         file = path(file)
         if parent is None and self.search(file):
             raise DuplicatedFileException()
@@ -263,18 +272,18 @@ class FileManager(gtk.TreeStore, object):
         filename = file if parent is None else file.basename()
         if file.isdir():
             entry = FileEntry(file, "folder", filename, 0, "Folder")
-            it = self.append(parent, entry.to_list())
+            it = self.store.append(parent, entry.to_list())
             for d in file.dirs():
-                self.add_file(d, it)
+                self.add(d, it)
             for f in file.files():
-                self.add_file(f, it)
+                self.add(f, it)
             # remove empty or set size
-            count = self.iter_n_children(it)
+            count = self.store.iter_n_children(it)
             if count > 0 or parent is None:
                 entry.size = "%d items" % count
-                entry.save(self, it)
+                entry.save(self.store, it)
             else:
-                self.remove(it)
+                self.iter_remove(it)
         else:
             filetype = self._get_filetype(file)
             # only allow text files
@@ -288,7 +297,7 @@ class FileManager(gtk.TreeStore, object):
                     size = "%.2f MB" % (file.size / 1000000.0)
                 entry = FileEntry(file, "text-x-script", filename, size, 
                                   filetype, charset)
-                self.append(parent, entry.to_list())
+                self.store.append(parent, entry.to_list())
 
     def _create_backup(self, file):
         file.copy2(file + "~")

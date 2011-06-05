@@ -10,29 +10,8 @@
   <object class="GtkAction" id="convertAction">
     <property name="label" translatable="yes">Convert</property>
     <property name="stock_id">gtk-convert</property>
-    <signal name="activate" handler="on_convertAction_activate" swapped="no"/>
-  </object>
-  <object class="GtkAction" id="editCharsetAction">
-    <property name="label" translatable="yes">Edit charset</property>
-    <property name="stock_id">gtk-edit</property>
     <property name="sensitive">False</property>
-    <signal name="activate" handler="on_editCharsetAction_activate" swapped="no"/>
-  </object>
-  <object class="GtkTreeStore" id="fileStore">
-    <columns>
-      <!-- column-name path -->
-      <column type="gchararray"/>
-      <!-- column-name icon -->
-      <column type="gchararray"/>
-      <!-- column-name filename -->
-      <column type="gchararray"/>
-      <!-- column-name size -->
-      <column type="gchararray"/>
-      <!-- column-name desc -->
-      <column type="gchararray"/>
-      <!-- column-name charset -->
-      <column type="gchararray"/>
-    </columns>
+    <signal name="activate" handler="on_convertAction_activate" swapped="no"/>
   </object>
   <object class="GtkAction" id="removeAction">
     <property name="label" translatable="yes">Remove</property>
@@ -62,8 +41,29 @@
       </row>
     </data>
   </object>
+  <object class="GtkAction" id="editCharsetAction">
+    <property name="label" translatable="yes">Edit charset</property>
+    <property name="stock_id">gtk-edit</property>
+    <property name="sensitive">False</property>
+    <signal name="activate" handler="on_editCharsetAction_activate" swapped="no"/>
+  </object>
+  <object class="GtkTreeStore" id="fileStore">
+    <columns>
+      <!-- column-name path -->
+      <column type="gchararray"/>
+      <!-- column-name icon -->
+      <column type="gchararray"/>
+      <!-- column-name filename -->
+      <column type="gchararray"/>
+      <!-- column-name size -->
+      <column type="gchararray"/>
+      <!-- column-name desc -->
+      <column type="gchararray"/>
+      <!-- column-name charset -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkWindow" id="window">
-    <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Baudot</property>
     <property name="default_width">800</property>
@@ -136,6 +136,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="related_action">removeAll</property>
+                        <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
                       </object>
                     </child>
