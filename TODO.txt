@@ -1,0 +1,11 @@
+* Show progress dialogs while
+    > Loading files
+    > Converting encodings
+* Cleanup unused code
+* Handle detection low confidence
+* Create add file custom dialog (To choose files or folders)
+* Test and improve file type recognition
+* Improve syntax highligthing
+* TEST, TEST, TEST
+* Create user documentation
+* Create developer documentation
