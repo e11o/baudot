@@ -21,7 +21,7 @@ class FileManagerTest(unittest.TestCase):
         
     def test_get_filetype(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
-        self.assertEqual("ISO-8859 English text", self.fm._get_filetype(file))
+        self.assertRegexpMatches(self.fm._get_filetype(file), ".*ISO.*text.*")
     
     def test_add_search(self):
         dir = self.samples / "dir1"
@@ -48,8 +48,8 @@ class FileManagerTest(unittest.TestCase):
         self.assertEqual(txt, txt_row[0])
         self.assertEqual("text-x-script", txt_row[1])
         self.assertEqual("sample1-ISO-8859-1.txt", txt_row[2])
-        self.assertEqual("4.14 KB", txt_row[3])
-        self.assertEqual("ISO-8859 English text", txt_row[4])
+        self.assertEqual("1.16 KB", txt_row[3])
+        self.assertRegexpMatches(txt_row[4], ".*ISO-8859.*text.*")
         self.assertEqual("ISO-8859-1", txt_row[5])
         
         self.assertTrue(image.exists())
