@@ -47,7 +47,9 @@ setup(name="Baudot",
     url="https://github.com/drupal4media/baudot",
     packages=['baudot'],
     include_package_data=True,
-    install_requires = ['PyICU', 'path.py'],#'PyGTK', 'python-magic', 
+    install_requires = ['PyGTKCodeBuffer', 
+                        'PyICU',
+                        'path.py'],#'PyGTK', 'magic',
     test_suite = 'nose.collector',
 )
 
@@ -73,13 +75,19 @@ def coverage():
     module.
     '''
     command = 'nosetests --with-coverage --cover-package baudot ' + \
-              '--cover-html'
+              '--cover-html --cover-html-dir docs/coverage/html'
     sh(command)
 
 @task
 def clean():
-    '''Removes all pyc files.
+    '''Removes garbage
     '''
-    d = path(".")
-    for f in d.walkfiles('*.pyc'):
+    files = (".coverage", )
+    dirs = ("Baudot.egg-info", )
+    pwd = path(".")
+    for f in pwd.walkfiles('*.pyc'):
         f.remove()
+    for f in files:
+        (pwd / f).remove()
+    for d in dirs:
+        (pwd / d).rmtree()

@@ -7,7 +7,7 @@ from path import path
 
 from baudot.core import CharsetConverter
 
-class FileEncoderTest(unittest.TestCase):
+class CharsetConverterTest(unittest.TestCase):
 
     def setUp(self):
         self.converter = CharsetConverter()
@@ -15,9 +15,9 @@ class FileEncoderTest(unittest.TestCase):
 
     def test_detection(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
-        self.assertEquals("ISO-8859-1", self.converter.detect_encoding(file))
+        self.assertEquals("ISO-8859-1", self.converter.detect_encoding(file).charset)
         file = self.samples / "sample1-UTF-8.txt"
-        self.assertEquals("UTF-8", self.converter.detect_encoding(file))
+        self.assertEquals("UTF-8", self.converter.detect_encoding(file).charset)
 
     def test_convertion_from_iso_to_utf(self):
         # setup files

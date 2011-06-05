@@ -288,7 +288,9 @@ class FileManager(object):
             filetype = self._get_filetype(file)
             # only allow text files
             if "text" in filetype.lower():
-                charset = converter.detect_encoding(file)
+                match = converter.detect_encoding(file)
+                #TODO: check detection confidence
+                charset = match.charset if match else None
                 if file.size < 1000:
                     size = "%d B" % file.size
                 elif file.size < 1000000:
@@ -374,6 +376,9 @@ class InProgressDialog(object):
 #--------------------------------------------------------
 # CharsetChooser class
 #--------------------------------------------------------
+# TODO: import only if available
+from gtkcodebuffer import CodeBuffer, SyntaxLoader
+
 class CharsetChooser(object):
 
     def __init__(self, file, charset):
@@ -384,10 +389,14 @@ class CharsetChooser(object):
         builder.add_from_file(glade_path / "charset_chooser.glade")
         self.dialog = builder.get_object("chooser")
         self.dialog.set_title(file.basename())
-        self.text_buffer = builder.get_object("textView").get_buffer()
+        text_view = builder.get_object("textView")
+        #TODO: choose appropriate syntax
+        lang = SyntaxLoader("python")
+        self.text_buffer = CodeBuffer(lang=lang)
+        text_view.set_buffer(self.text_buffer)
         self.charset_cmb = builder.get_object("encodingCmb")
         builder.connect_signals(self)
-        
+
         combo_from_strings(self._get_charsets(self.data), self.charset_cmb, charset)
         self.set_data(charset)
 

@@ -1,9 +1,9 @@
 from icu import CharsetDetector, CharsetMatch, UnicodeString
-import path
+from path import path
 
 class CharsetConverter():
     '''
-    Provides all functionality for managing character encodings
+    Wrapper for charset handling library
     '''
     def __init__(self):
         self.detector = CharsetDetector()
@@ -16,13 +16,13 @@ class CharsetConverter():
                 if x not in seen and not seen_add(x)]
 
     def detect_encoding(self, src_file):
-        src_file = path.path(src_file)
+        src_file = path(src_file)
         data = src_file.bytes()
         return self.detect(data)
 
     def convert_encoding(self, src_file, dst_file, src_charset, dst_charset):
-        src_file = path.path(src_file)
-        dst_file = path.path(dst_file)
+        src_file = path(src_file)
+        dst_file = path(dst_file)
         data = src_file.bytes()
         if data:
             encoded = UnicodeString(data, src_charset).encode(dst_charset)
@@ -31,4 +31,14 @@ class CharsetConverter():
     def detect(self, text):
         self.detector.setText(text)
         m = self.detector.detect()
-        return m.getName()
+        return Match.fromICU(m)
+
+class Match(object):
+    def __init__(self, charset, confidence):
+        self.charset = charset
+        self.confidence = confidence
+
+    @staticmethod
+    def fromICU(m):
+        return Match(m.getName(), m.getConfidence()) if m else None
+                     

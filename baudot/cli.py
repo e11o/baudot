@@ -48,12 +48,14 @@ def main(argv):
         sys.exit(2)
     converter = CharsetConverter()
     if source_encoding is None:
-        source_encoding = converter.detect_encoding(input_file)
-        if source_encoding is None:
+        match = converter.detect_encoding(input_file)
+        if match is None:
             print "ERROR: unable to detect source encoding"
             sys.exit(2)
+        # check confidence threshold?
+        source_encoding = match.charset
     if source_encoding.lower() == target_encoding.lower():
-        print "Skipping file %s - Source and target encodings are equal: %s" % (input_file, source_encoding)
+        print "Skipping file %s - Same source and target encodings: %s" % (input_file, source_encoding)
         sys.exit()
     if os.path.exists(output_file):
         if os.path.isdir(output_file):
