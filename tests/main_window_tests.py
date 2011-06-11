@@ -1,25 +1,24 @@
-import unittest
-from guitest.gtktest import GtkTestCase, guistate
-from guitest.utils import mainloop_handler
+from guitest.gtktest import GtkTestCase
 import gtk
 
-from pkg_resources import resource_filename
+from pkg_resources import ResourceManager
 from path import path
 
 from baudot.gui import MainWindow, FileManager
 
-samples = path(resource_filename(__package__, "samples"))
+samples = path(ResourceManager().resource_filename(__package__, "samples"))
+
 
 class FileChooserStub(object):
     def run(self):
         return gtk.RESPONSE_OK
-    def get_selection(self):
+    def get_filename(self):
         return samples / "dir1"
     def destroy(self):
         pass
 
 class CharsetChooserStub(object):
-    def __init__(self, path, charset):
+    def __init__(self, f, c):
         pass
     def run(self):
         return gtk.RESPONSE_APPLY
@@ -28,9 +27,10 @@ class CharsetChooserStub(object):
     def destroy(self):
         pass
 
+
 charset= copy_to = None
 class FileManagerStub(FileManager):
-    def convert_files(self, _charset, _copy_to):
+    def convert_files(self, _charset, _copy_to=None, _callback=None):
         #store values in globals
         global charset, copy_to
         charset = _charset
@@ -42,21 +42,23 @@ class MainWindowTest(GtkTestCase):
                  'baudot.gui.FileManager' : FileManagerStub}
 
     def test_init(self):
-        win = MainWindow()
+        win = MainWindow(testing=True)
         self.assertIsNotNone(win)
         self.assertEqual("UTF-8", win.charset_cmb.get_active_text())
         self.assertEqual(0, len(win.fm))
 
     def test_add_file(self):
-        win = MainWindow()
+        win = MainWindow(testing=True)
         self.assertEqual(0, len(win.fm))
         win.add_action.activate()
         self.assertEqual(1, len(win.fm))
         self.assertEqual(samples / "dir1", win.fm.store[0][0])
 
     def test_remove(self):
-        win = MainWindow()
+        win = MainWindow(testing=True)
+        self.assertFalse(win.convert_action.get_sensitive())
         win.add_action.activate()
+        self.assertTrue(win.convert_action.get_sensitive())
         self.assertEqual(1, len(win.fm))
         self.assertFalse(win.remove_action.get_sensitive())
         win.selection.select_path("0")
@@ -64,9 +66,10 @@ class MainWindowTest(GtkTestCase):
         win.remove_action.activate()
         self.assertEqual(0, len(win.fm))
         self.assertFalse(win.remove_action.get_sensitive())
+        self.assertFalse(win.convert_action.get_sensitive())
 
     def test_edit_charset(self):
-        win = MainWindow()
+        win = MainWindow(testing=True)
         win.add_action.activate()
         self.assertEqual(1, len(win.fm))
         self.assertFalse(win.edit_charset_action.get_sensitive())
@@ -81,14 +84,13 @@ class MainWindowTest(GtkTestCase):
         self.assertEqual("UTF-8", model.get_value(model.get_iter("0:2"), 5))
     
     def test_select_destination(self):
-        win = MainWindow()
+        win = MainWindow(testing=True)
         self.assertFalse(win.dst_chooser.get_sensitive())
         win.dst_cmb.set_active(1)
         self.assertTrue(win.dst_chooser.get_sensitive())
         
     def test_convert(self):
-        global charset, copy_to
-        win = MainWindow()
+        win = MainWindow(testing=True)
         self.assertFalse(win.convert_action.get_sensitive())
         win.add_action.activate()
         self.assertTrue(win.convert_action.get_sensitive())
@@ -100,4 +102,3 @@ class MainWindowTest(GtkTestCase):
         win.convert_action.activate()
         self.assertNotEqual("UTF-8", charset)
         self.assertIsNotNone(copy_to)
-        

@@ -4,3 +4,7 @@ docs/coverage/*
 build/*
 Baudot.egg-info/*
 .coverage
+*ropeproject*
+/Baudot.egg-info
+/build
+/REFERENCE

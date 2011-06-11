@@ -1,6 +1,7 @@
 * Show progress dialogs while
     > Loading files
     > Converting encodings
+* Refresh after conversion
 * Cleanup unused code
 * Handle detection low confidence
 * Create add file custom dialog (To choose files or folders)
@@ -9,3 +10,5 @@
 * TEST, TEST, TEST
 * Create user documentation
 * Create developer documentation
+* App icon
+* Verify icon

@@ -1,7 +1,8 @@
 import unittest
 import tempfile
-from pkg_resources import resource_filename
+from pkg_resources import ResourceManager
 from path import path
+import gtk
 
 from baudot.gui import FileManager, DuplicatedFileException
 from baudot.core import CharsetConverter
@@ -11,7 +12,7 @@ class FileManagerTest(unittest.TestCase):
     def setUp(self):
         self.converter = CharsetConverter()
         self.fm = FileManager()
-        self.samples = path(resource_filename(__package__, "samples"))
+        self.samples = path(ResourceManager().resource_filename(__package__, "samples"))
 
     def test_normalize(self):
         self.assertEqual("/var/log/", self.fm._normalize("/var/log/"))
@@ -21,8 +22,14 @@ class FileManagerTest(unittest.TestCase):
         
     def test_get_filetype(self):
         file = self.samples / "sample1-ISO-8859-1.txt"
-        self.assertRegexpMatches(self.fm._get_filetype(file), ".*ISO.*text.*")
+        self.assertEqual("text/plain", self.fm._get_mime_type(file))
     
+    def test_count_files(self):
+        dir = self.samples / "dir1"
+        self.assertEqual(9, self.fm.count_files(dir))
+        txt = dir / "sample1-ISO-8859-1.txt"
+        self.assertEqual(1, self.fm.count_files(txt))
+
     def test_add_search(self):
         dir = self.samples / "dir1"
         txt = dir / "sample1-ISO-8859-1.txt"
@@ -37,7 +44,7 @@ class FileManagerTest(unittest.TestCase):
         self.assertIsNotNone(dir_row)
         self.assertEqual(6, len(dir.listdir()))
         self.assertEqual(dir, dir_row[0])
-        self.assertEqual("folder", dir_row[1])
+        self.assertEqual(gtk.STOCK_DIRECTORY, dir_row[1])
         self.assertEqual(dir, dir_row[2])
         self.assertEqual("4 items", dir_row[3])
         self.assertEqual("Folder", dir_row[4])
@@ -46,10 +53,10 @@ class FileManagerTest(unittest.TestCase):
         txt_row = self.fm.search(txt)
         self.assertIsNotNone(txt_row)
         self.assertEqual(txt, txt_row[0])
-        self.assertEqual("text-x-script", txt_row[1])
+        self.assertEqual(gtk.STOCK_FILE, txt_row[1])
         self.assertEqual("sample1-ISO-8859-1.txt", txt_row[2])
         self.assertEqual("1.16 KB", txt_row[3])
-        self.assertRegexpMatches(txt_row[4], ".*ISO-8859.*text.*")
+        self.assertEqual("text/plain", txt_row[4])
         self.assertEqual("ISO-8859-1", txt_row[5])
         
         self.assertTrue(image.exists())

@@ -1,10 +1,12 @@
 from icu import CharsetDetector, CharsetMatch, UnicodeString
 from path import path
 
+
 class CharsetConverter():
     '''
     Wrapper for charset handling library
     '''
+
     def __init__(self):
         self.detector = CharsetDetector()
 
@@ -12,7 +14,7 @@ class CharsetConverter():
         # remove duplicated charsets
         seen = set()
         seen_add = seen.add
-        return [ x for x in self.detector.getAllDetectableCharsets()
+        return [x for x in self.detector.getAllDetectableCharsets()
                 if x not in seen and not seen_add(x)]
 
     def detect_encoding(self, src_file):
@@ -33,7 +35,9 @@ class CharsetConverter():
         m = self.detector.detect()
         return Match.fromICU(m)
 
+
 class Match(object):
+
     def __init__(self, charset, confidence):
         self.charset = charset
         self.confidence = confidence
@@ -41,4 +45,3 @@ class Match(object):
     @staticmethod
     def fromICU(m):
         return Match(m.getName(), m.getConfidence()) if m else None
-                     
