@@ -13,6 +13,7 @@ from path import path
 from pkg_resources import ResourceManager
 
 from core import CharsetConverter
+from widget import FileFolderChooser
 
 # globals
 VERSION = "0.1"
@@ -98,34 +99,35 @@ class MainWindow(object):
         #TODO: update files in view
 
     def on_addAction_activate(self, data=None):
-        chooser = FileDirChooser()
+        chooser = FileFolderChooser()
         if chooser.run() == gtk.RESPONSE_OK:
-            f = chooser.get_filename()
+            chosen = chooser.get_filenames()
             chooser.destroy()
             #TODO: move this to a processing queue
-            try:
-                thread = Thread(target=lambda : self.fm.add(f))
-                count = self.fm.count_files(f)
-                class Namespace(object): pass
-                ns = Namespace()
-                ns.added = 0
-                box = self._create_progress_box(f)
-                def on_canceled(widget):
-                    self.fm.stop()
-                    self.win_box.remove(widget)
-                box.connect("canceled", on_canceled)
-                def on_file_added(widget, filepath):
-                    ns.added += 1
-                    progress = float(ns.added) * 100/ count
-                    gobject.idle_add(box.update_progress, progress)
-                    if progress == 100:
-                        gobject.idle_add(self.win_box.remove, box)
-                self.fm.connect("file-added", on_file_added)
-                thread.start()
-                if self._testing:
-                    thread.join()                
-            except DuplicatedFileException:
-                gtk_error_msg(self.win, "File already in Baudot")
+            for f in chosen:
+                try:
+                    thread = Thread(target=lambda : self.fm.add(f))
+                    count = self.fm.count_files(f)
+                    class Namespace(object): pass
+                    ns = Namespace()
+                    ns.added = 0
+                    box = self._create_progress_box(f)
+                    def on_canceled(widget):
+                        self.fm.stop()
+                        self.win_box.remove(widget)
+                    box.connect("canceled", on_canceled)
+                    def on_file_added(widget, filepath):
+                        ns.added += 1
+                        progress = float(ns.added) * 100/ count
+                        gobject.idle_add(box.update_progress, progress)
+                        if progress == 100:
+                            gobject.idle_add(self.win_box.remove, box)
+                    self.fm.connect("file-added", on_file_added)
+                    thread.start()
+                    if self._testing:
+                        thread.join()                
+                except DuplicatedFileException:
+                    gtk_error_msg(self.win, "File already in Baudot")
         else:
             chooser.destroy()
 
@@ -363,48 +365,6 @@ class FileManager(gobject.GObject):
     def _get_mime_type(self, filepath):
         info = gio.File(filepath).query_info("standard::content-type")
         return info.get_content_type()
-
-
-class FileDirChooser(gtk.Dialog):
-
-    def __init__(self, parent=None):
-        super(FileDirChooser, self).__init__(parent=parent)
-        self.set_title("Select file or folder...")
-        self.set_modal(True)
-        self.set_default_size(800, 600)
-        self.cancel_btn = gtk.Button(stock=gtk.STOCK_CANCEL)
-        self.add_action_widget(self.cancel_btn, gtk.RESPONSE_CANCEL)
-        self.ok_btn = gtk.Button(stock=gtk.STOCK_OK)
-        self.ok_btn.set_sensitive(False)
-        self.add_action_widget(self.ok_btn, gtk.RESPONSE_OK)
-        
-        self.fc = gtk.FileChooserWidget()
-        self.fc.set_select_multiple(True)
-        self.fc.set_show_hidden(True)
-        self.fc.connect("selection-changed", self.on_selection_changed)
-        self.fc.connect("current-folder-changed", self.on_current_folder_changed)
-        self.vbox.pack_start(self.fc, True, True)
-
-        default_filter = gtk.FileFilter()
-        default_filter.set_name("Text files")
-        default_filter.add_mime_type("text/*")
-        self.fc.add_filter(default_filter)
-        
-        all_filter = gtk.FileFilter()
-        all_filter.set_name("All files")
-        all_filter.add_pattern("*")
-        self.fc.add_filter(all_filter)
-
-        self.show_all()
-
-    def on_current_folder_changed(self, filechooser):
-        self.fc.unselect_all()
-        
-    def on_selection_changed(self, filechooser):
-        self.ok_btn.set_sensitive(self.fc.get_filename() is not None)
-        
-    def get_filename(self):
-        return self.fc.get_filename()
 
 
 class ProgressBox(gtk.EventBox):

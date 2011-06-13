@@ -33,7 +33,7 @@
   <object class="GtkAction" id="editCharsetAction">
     <property name="label" translatable="yes">Verify</property>
     <property name="tooltip" translatable="yes">Verify charset</property>
-    <property name="stock_id">gtk-spell-check</property>
+    <property name="stock_id">gtk-index</property>
     <property name="sensitive">False</property>
     <signal name="activate" handler="on_editCharsetAction_activate" swapped="no"/>
   </object>

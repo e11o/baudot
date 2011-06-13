@@ -1,14 +1,17 @@
+* Fix duplicated recognition
+* Refactor progress widget
 * Show progress dialogs while
-    > Loading files
     > Converting encodings
 * Refresh after conversion
 * Cleanup unused code
+* Create app icon
 * Handle detection low confidence
-* Create add file custom dialog (To choose files or folders)
-* Test and improve file type recognition
-* Improve syntax highligthing
+* Improve syntax highligthing in preview
 * TEST, TEST, TEST
+* L10n
+* Test in virtualenv
+* Debian package
 * Create user documentation
 * Create developer documentation
-* App icon
-* Verify icon
+* Create verify charset icon
+* Preferences implementation

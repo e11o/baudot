@@ -1,6 +1,5 @@
 from guitest.gtktest import GtkTestCase
 import gtk
-
 from pkg_resources import ResourceManager
 from path import path
 
@@ -12,10 +11,11 @@ samples = path(ResourceManager().resource_filename(__package__, "samples"))
 class FileChooserStub(object):
     def run(self):
         return gtk.RESPONSE_OK
-    def get_filename(self):
-        return samples / "dir1"
+    def get_filenames(self):
+        return (samples / "dir1", )
     def destroy(self):
         pass
+
 
 class CharsetChooserStub(object):
     def __init__(self, f, c):
@@ -36,8 +36,9 @@ class FileManagerStub(FileManager):
         charset = _charset
         copy_to = _copy_to
 
+
 class MainWindowTest(GtkTestCase):
-    overrides = {'baudot.gui.FileDirChooser' : FileChooserStub,
+    overrides = {'baudot.gui.FileFolderChooser' : FileChooserStub,
                  'baudot.gui.CharsetChooser' : CharsetChooserStub,
                  'baudot.gui.FileManager' : FileManagerStub}
 
