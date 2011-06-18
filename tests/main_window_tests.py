@@ -80,7 +80,7 @@ class MainWindowTest(GtkTestCase):
         win.selection.select_path("0:2") #file
         self.assertTrue(win.edit_charset_action.get_sensitive())        
         model = win.fm.store
-        self.assertEqual("ISO-8859-1", model.get_value(model.get_iter("0:2"), 5))
+        self.assertEqual("ISO-8859-1", model.get_value(model.get_iter("0:1"), 5))
         win.edit_charset_action.activate()
         self.assertEqual("UTF-8", model.get_value(model.get_iter("0:2"), 5))
     

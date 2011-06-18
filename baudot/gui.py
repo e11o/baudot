@@ -315,9 +315,9 @@ class FileManager(gobject.GObject):
             entry = FileEntry(filepath, gtk.STOCK_DIRECTORY, 
                               filename, 0, "Folder")
             it = self.store.append(parent, entry.to_list())
-            for d in filepath.dirs():
+            for d in sorted(filepath.dirs()):
                 self.add(d, it)
-            for f in filepath.files():
+            for f in sorted(filepath.files()):
                 self.add(f, it)
             # remove empty or set size
             count = self.store.iter_n_children(it)
@@ -413,9 +413,6 @@ class ProgressBox(gtk.EventBox):
         self.progress_bar.set_value(value)
 
 
-# TODO: import only if available
-from gtkcodebuffer import CodeBuffer, SyntaxLoader
-
 class CharsetChooser(object):
 
     def __init__(self, filepath, charset):
@@ -427,13 +424,7 @@ class CharsetChooser(object):
         self.dialog = builder.get_object("chooser")
         self.dialog.set_title(filepath.basename())
         text_view = builder.get_object("textView")
-        if str(filepath).endswith(".py"):
-            #TODO: choose appropriate syntax
-            lang = SyntaxLoader("python")
-            self.text_buffer = CodeBuffer(lang=lang)
-            text_view.set_buffer(self.text_buffer)
-        else:
-            self.text_buffer = text_view.get_buffer()
+        self.text_buffer = text_view.get_buffer()
         self.charset_cmb = builder.get_object("encodingCmb")
         builder.connect_signals(self)
 

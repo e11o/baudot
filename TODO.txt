@@ -5,13 +5,20 @@
 * Refresh after conversion
 * Cleanup unused code
 * Create app icon
-* Handle detection low confidence
-* Improve syntax highligthing in preview
-* TEST, TEST, TEST
-* L10n
-* Test in virtualenv
+* Create verify charset icon
+* TEST, TEST, TEST in virtualenv
 * Debian package
 * Create user documentation
+
+* RELEASE v0.1
+
+* Handle detection low confidence
+* L10n
 * Create developer documentation
-* Create verify charset icon
+
+* RELEASE v0.2
+
+* Add syntax highligthing in preview
 * Preferences implementation
+
+* RELEASE v0.3
