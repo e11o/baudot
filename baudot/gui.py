@@ -52,6 +52,10 @@ class MainWindow(object):
         self.convert_action = builder.get_object("convertAction")
         self.charset_cmb = builder.get_object("charsetCmb")
         self.file_view = builder.get_object("fileView")
+        self.info_area = gtk.VBox()
+        self.info_area.set_visible(True)
+        self.win_box.pack_start(self.info_area, False)
+        self.win_box.reorder_child(self.info_area, 3)
         builder.connect_signals(self)
 
         self.fm = FileManager()
@@ -101,33 +105,17 @@ class MainWindow(object):
     def on_addAction_activate(self, data=None):
         chooser = FileFolderChooser()
         if chooser.run() == gtk.RESPONSE_OK:
-            chosen = chooser.get_filenames()
+            files = chooser.get_filenames()
             chooser.destroy()
-            #TODO: move this to a processing queue
-            for f in chosen:
-                try:
-                    thread = Thread(target=lambda : self.fm.add(f))
-                    count = self.fm.count_files(f)
-                    class Namespace(object): pass
-                    ns = Namespace()
-                    ns.added = 0
-                    box = self._create_progress_box(f)
-                    def on_canceled(widget):
-                        self.fm.stop()
-                        self.win_box.remove(widget)
-                    box.connect("canceled", on_canceled)
-                    def on_file_added(widget, filepath):
-                        ns.added += 1
-                        progress = float(ns.added) * 100/ count
-                        gobject.idle_add(box.update_progress, progress)
-                        if progress == 100:
-                            gobject.idle_add(self.win_box.remove, box)
-                    self.fm.connect("file-added", on_file_added)
-                    thread.start()
-                    if self._testing:
-                        thread.join()                
-                except DuplicatedFileException:
-                    gtk_error_msg(self.win, "File already in Baudot")
+            for a_file in files:
+                cmd = self.fm.add(a_file)
+                def on_command_started(cmd):
+                    box = AddFileInfoBox(cmd)
+                    self.info_area.add(box)
+                cmd.connect("command-started", on_command_started)
+                cmd.start()
+                if self._testing:
+                    cmd.join()                
         else:
             chooser.destroy()
 
@@ -166,13 +154,6 @@ class MainWindow(object):
 
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
-
-    def _create_progress_box(self, filepath):
-        progress_box = ProgressBox()
-        progress_box.set_message("Adding <b>%s</b>" % filepath)
-        self.win_box.pack_start(progress_box, False)
-        self.win_box.reorder_child(progress_box, 3)
-        return progress_box
         
 
 class FileEntry(object):
@@ -213,12 +194,6 @@ class FileEntry(object):
 
 class FileManager(gobject.GObject):
 
-    __gsignals__ = {
-        'file-added': (gobject.SIGNAL_RUN_LAST, 
-                           gobject.TYPE_NONE, 
-                           (gobject.TYPE_STRING, )),
-    }
-
     def __init__(self):
         gobject.GObject.__init__(self)
         # path, icon, filename, size, description, charset
@@ -241,23 +216,6 @@ class FileManager(gobject.GObject):
 
     def iter_remove(self, it):
         return self.store.remove(it)
-
-    def search(self, filepath):
-        filepath = path(filepath)
-
-        def search(rows, filepath):
-            if not rows:
-                return None
-            for row in rows:
-                entry = FileEntry.from_row(row)
-                if entry.filepath == filepath:
-                    return row
-                if filepath.startswith(entry.filepath):
-                    result = search(row.iterchildren(), filepath)
-                    if result:
-                        return result
-            return None
-        return search(self.store, filepath)
 
     def convert_files(self, dst_charset, copy_to=None, callback=None):
         self._stop = False
@@ -300,57 +258,8 @@ class FileManager(gobject.GObject):
                     convert(children, base_path)
         convert(self.store, None)
 
-    def add(self, filepath, parent=None):
-        filepath = path(filepath)
-        if parent is None:
-            self._stop = False
-            if self.search(filepath):
-                raise DuplicatedFileException()
-        
-        if self._stop:
-            return
-
-        filename = filepath if parent is None else filepath.basename()
-        if filepath.isdir():
-            entry = FileEntry(filepath, gtk.STOCK_DIRECTORY, 
-                              filename, 0, "Folder")
-            it = self.store.append(parent, entry.to_list())
-            for d in sorted(filepath.dirs()):
-                self.add(d, it)
-            for f in sorted(filepath.files()):
-                self.add(f, it)
-            # remove empty or set size
-            count = self.store.iter_n_children(it)
-            if count > 0 or parent is None:
-                entry.size = "%d items" % count
-                entry.save(self.store, it)
-            else:
-                self.iter_remove(it)
-        else:
-            mime = self._get_mime_type(filepath)
-            # only allow text files
-            if "text" in mime.lower():
-                match = CONVERTER.detect_encoding(filepath)
-                #TODO: check detection confidence
-                charset = match.charset if match else None
-                if filepath.size < 1000:
-                    size = "%d B" % filepath.size
-                elif filepath.size < 1000000:
-                    size = "%.2f KB" % (filepath.size / 1000.0)
-                else:
-                    size = "%.2f MB" % (filepath.size / 1000000.0)
-                entry = FileEntry(filepath, gtk.STOCK_FILE, filename, size,
-                                  mime, charset)
-                self.store.append(parent, entry.to_list())
-        self.emit("file-added", filepath)
-
-    def count_files(self, filepath):
-        filepath = path(filepath)
-        count = 1
-        if filepath.isdir():
-            for f in filepath.walk():
-                count += 1
-        return count
+    def add(self, filepath):
+        return AddFileCommand(self.store, filepath)
 
     def _create_backup(self, filepath):
         filepath.copy2(filepath + "~")
@@ -362,18 +271,140 @@ class FileManager(gobject.GObject):
             filepath = filepath.normpath() + '/'
         return filepath
 
+class FileCommand(gobject.GObject, Thread):
+    
+    __gsignals__ = {
+        'command-started': (gobject.SIGNAL_RUN_LAST, 
+                           gobject.TYPE_NONE, 
+                           ()),
+        'command-finished': (gobject.SIGNAL_RUN_LAST, 
+                           gobject.TYPE_NONE, 
+                           ()),
+        'command-aborted': (gobject.SIGNAL_RUN_LAST, 
+                           gobject.TYPE_NONE, 
+                           (gobject.TYPE_STRING, )),
+        'progress-updated': (gobject.SIGNAL_RUN_LAST, 
+                           gobject.TYPE_NONE, 
+                           (gobject.TYPE_INT,)),
+    }
+    
+    def __init__(self, store):
+        gobject.GObject.__init__(self)
+        Thread.__init__(self)
+        self._stopped = False
+        self.store = store
+        
+    def run(self):
+        self.emit("command-started")
+        self.execute()
+        self.emit("command-finished")
+    
+    def stop(self):
+        self._stopped = True
+        
+    def execute(self):
+        raise Exception("Has to be implemented in child class")
+
+    def search(self, filepath):
+        filepath = path(filepath)
+
+        def search(rows, filepath):
+            if not rows:
+                return None
+            for row in rows:
+                entry = FileEntry.from_row(row)
+                if entry.filepath == filepath:
+                    return row
+                if filepath.startswith(entry.filepath):
+                    result = search(row.iterchildren(), filepath)
+                    if result:
+                        return result
+            return None
+        return search(self.store, filepath)
+
+
+class AddFileCommand(FileCommand):
+    
+    def __init__(self, store, filepath):
+        super(AddFileCommand, self).__init__(store)
+        self.filepath = path(filepath)
+        self.total_files = self._count_files(filepath)
+        self.added_files = 0
+    
+    def execute(self):
+        if self.search(self.filepath):
+            self.emit("command-aborted", self.filepath)
+            return
+        
+        def add_file(filepath, parent):
+            if self._stopped:
+                return
+    
+            filename = filepath if parent is None else filepath.basename()
+            
+            if filepath.isdir():
+                entry = FileEntry(filepath, gtk.STOCK_DIRECTORY, 
+                                  filename, 0, "Folder")
+                it = self.store.append(parent, entry.to_list())
+                for d in sorted(filepath.dirs()):
+                    add_file(d, it)
+                for f in sorted(filepath.files()):
+                    add_file(f, it)
+                # remove empty or set size
+                count = self.store.iter_n_children(it)
+                if count > 0 or parent is None:
+                    entry.size = "%d items" % count
+                    entry.save(self.store, it)
+                else:
+                    self.store.remove(it)
+            else:
+                mime = self._get_mime_type(filepath)
+                # only allow text files
+                if "text" in mime.lower():
+                    match = CONVERTER.detect_encoding(filepath)
+                    #TODO: check detection confidence
+                    charset = match.charset if match else None
+                    if filepath.size < 1000:
+                        size = "%d B" % filepath.size
+                    elif filepath.size < 1000000:
+                        size = "%.2f KB" % (filepath.size / 1000.0)
+                    else:
+                        size = "%.2f MB" % (filepath.size / 1000000.0)
+                    entry = FileEntry(filepath, gtk.STOCK_FILE, filename, size,
+                                      mime, charset)
+                    self.store.append(parent, entry.to_list())
+            self.added_files += 1
+            progress = float(self.added_files) * 100 / self.total_files
+            self.emit("progress-updated", progress)
+            
+        add_file(self.filepath, None)
+        
+    def _count_files(self, filepath):
+        filepath = path(filepath)
+        count = 1
+        if filepath.isdir():
+            for f in filepath.walk():
+                count += 1
+        return count
+
     def _get_mime_type(self, filepath):
         info = gio.File(filepath).query_info("standard::content-type")
         return info.get_content_type()
 
-
-class ProgressBox(gtk.EventBox):
+        
+class AddFileInfoBox(gtk.EventBox):
     __gsignals__ = {
         'canceled': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
     }
     
-    def __init__(self, is_open=True):
-        super(ProgressBox, self).__init__()
+    def __init__(self, cmd):
+        super(AddFileInfoBox, self).__init__()
+        
+        cmd.connect("progress-updated", self.on_progress_updated)
+        cmd.connect("command-aborted", self.on_command_aborted)
+        cmd.connect("command-finished", self.on_command_finished)
+        self.cmd = cmd
+        
         color = gtk.gdk.color_parse("#ffffc8")
         self.modify_bg(gtk.STATE_NORMAL, color)
 
@@ -382,11 +413,11 @@ class ProgressBox(gtk.EventBox):
 
         upper_box = gtk.HBox(spacing=5)
         icon = gtk.Image()
-        stock = gtk.STOCK_OPEN if is_open else gtk.STOCK_CONVERT
-        icon.set_from_stock(stock, gtk.ICON_SIZE_BUTTON)
+        icon.set_from_stock(gtk.STOCK_OPEN, gtk.ICON_SIZE_BUTTON)
         upper_box.pack_start(icon, False, False, 5)
         self.label = gtk.Label()
         self.label.set_use_markup(True)
+        self.label.set_markup("Adding <b>%s</b>" % cmd.filepath)
         upper_box.pack_start(self.label, False)
         main_box.pack_start(upper_box, False)
         
@@ -402,16 +433,22 @@ class ProgressBox(gtk.EventBox):
         
         self.add(main_box)
         self.show_all()
+
+    def on_command_aborted(self, cmd, filepath):
+        #TODO: replace with info bar
+        #gtk_error_msg(self.win, "File %s already in Baudot" % filepath)
+        print "File %s already in Baudot" % filepath
+        
+    def on_command_finished(self, cmd):
+        gobject.idle_add(self.parent.remove, self)
+        
+    def on_progress_updated(self, cmd, progress):
+        gobject.idle_add(self.progress_bar.set_value, progress)
     
     def on_cancel_btn_clicked(self, widget, data=None):
-        self.emit("canceled")
+        self.cmd.stop()
+        gobject.idle_add(self.parent.remove, self)
     
-    def set_message(self, message):
-        self.label.set_markup(message)
-
-    def update_progress(self, value):
-        self.progress_bar.set_value(value)
-
 
 class CharsetChooser(object):
 
@@ -464,9 +501,6 @@ class CharsetChooser(object):
             except (ValueError, LookupError):
                 pass
         return good
-
-class DuplicatedFileException(Exception):
-    pass
 
 def gtk_error_msg(parent, message):
     md = gtk.MessageDialog(parent,
