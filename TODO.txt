@@ -1,5 +1,3 @@
-* Fix duplicated recognition
-* Refactor progress widget
 * Show progress dialogs while
     > Converting encodings
 * Refresh after conversion
@@ -12,6 +10,7 @@
 
 * RELEASE v0.1
 
+* Show welcome screen
 * Handle detection low confidence
 * L10n
 * Create developer documentation

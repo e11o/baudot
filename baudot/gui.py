@@ -106,7 +106,7 @@ class MainWindow(object):
         chooser = FileFolderChooser()
         if chooser.run() == gtk.RESPONSE_OK:
             files = chooser.get_filenames()
-            chooser.destroy()
+            gobject.idle_add(chooser.destroy)
             for a_file in files:
                 cmd = self.fm.add(a_file)
                 def on_command_started(cmd):
@@ -320,6 +320,7 @@ class FileCommand(gobject.GObject, Thread):
                     if result:
                         return result
             return None
+        
         return search(self.store, filepath)
 
 
@@ -391,11 +392,48 @@ class AddFileCommand(FileCommand):
         info = gio.File(filepath).query_info("standard::content-type")
         return info.get_content_type()
 
+
+class InfoBox(gtk.EventBox):
+
+    def __init__(self):
+        super(InfoBox, self).__init__()
         
-class AddFileInfoBox(gtk.EventBox):
-    __gsignals__ = {
-        'canceled': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-    }
+        color = gtk.gdk.color_parse("#ffffc8")
+        self.modify_bg(gtk.STATE_NORMAL, color)
+
+
+class ErrorInfoBox(InfoBox):
+    
+    def __init__(self, message):
+        super(ErrorInfoBox, self).__init__()
+        
+        main_box = gtk.VBox()
+        main_box.set_border_width(5)
+
+        upper_box = gtk.HBox(spacing=5)
+        icon = gtk.Image()
+        icon.set_from_stock(gtk.STOCK_DIALOG_ERROR, gtk.ICON_SIZE_BUTTON)
+        upper_box.pack_start(icon, False, False, 5)
+        self.label = gtk.Label()
+        self.label.set_use_markup(True)
+        self.label.set_markup(message)
+        upper_box.pack_start(self.label, False)
+        main_box.pack_start(upper_box, False)
+        
+        alignment = gtk.Alignment(xalign=1, yalign=0.5, xscale=0.0, yscale=0.0)
+        close_btn = gtk.Button(stock=gtk.STOCK_CLOSE)
+        close_btn.connect("clicked", self.on_close_btn_clicked)
+        alignment.add(close_btn)
+        main_box.pack_start(alignment, expand=False)
+        
+        self.add(main_box)
+        self.show_all()
+
+    def on_close_btn_clicked(self, widget, data=None):
+        gobject.idle_add(self.parent.remove, self)
+
+
+class AddFileInfoBox(InfoBox):
     
     def __init__(self, cmd):
         super(AddFileInfoBox, self).__init__()
@@ -405,9 +443,6 @@ class AddFileInfoBox(gtk.EventBox):
         cmd.connect("command-finished", self.on_command_finished)
         self.cmd = cmd
         
-        color = gtk.gdk.color_parse("#ffffc8")
-        self.modify_bg(gtk.STATE_NORMAL, color)
-
         main_box = gtk.VBox()
         main_box.set_border_width(5)
 
@@ -427,7 +462,7 @@ class AddFileInfoBox(gtk.EventBox):
         alignment.add(self.progress_bar)
         lower_box.pack_start(alignment, expand=True, fill=True)
         cancel_btn = gtk.Button(stock=gtk.STOCK_CANCEL)
-        cancel_btn.connect("clicked", self.on_cancel_btn_clicked)
+        cancel_btn.connect("clicked", self.on_close_btn_clicked)
         lower_box.pack_start(cancel_btn, False)
         main_box.pack_start(lower_box, False)
         
@@ -435,9 +470,8 @@ class AddFileInfoBox(gtk.EventBox):
         self.show_all()
 
     def on_command_aborted(self, cmd, filepath):
-        #TODO: replace with info bar
-        #gtk_error_msg(self.win, "File %s already in Baudot" % filepath)
-        print "File %s already in Baudot" % filepath
+        box = ErrorInfoBox("%s is already in workspace" % filepath)
+        self.parent.add(box)
         
     def on_command_finished(self, cmd):
         gobject.idle_add(self.parent.remove, self)
@@ -445,7 +479,7 @@ class AddFileInfoBox(gtk.EventBox):
     def on_progress_updated(self, cmd, progress):
         gobject.idle_add(self.progress_bar.set_value, progress)
     
-    def on_cancel_btn_clicked(self, widget, data=None):
+    def on_close_btn_clicked(self, widget, data=None):
         self.cmd.stop()
         gobject.idle_add(self.parent.remove, self)
     
