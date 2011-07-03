@@ -37,16 +37,6 @@
     <property name="sensitive">False</property>
     <signal name="activate" handler="on_editCharsetAction_activate" swapped="no"/>
   </object>
-  <object class="GtkAction" id="removeAction">
-    <property name="stock_id">gtk-remove</property>
-    <property name="sensitive">False</property>
-    <signal name="activate" handler="on_removeAction_activate" swapped="no"/>
-  </object>
-  <object class="GtkAction" id="removeAllAction">
-    <property name="stock_id">gtk-clear</property>
-    <property name="sensitive">False</property>
-    <signal name="activate" handler="on_removeAllAction_activate" swapped="no"/>
-  </object>
   <object class="GtkTreeStore" id="fileStore">
     <columns>
       <!-- column-name path -->
@@ -62,6 +52,16 @@
       <!-- column-name charset -->
       <column type="gchararray"/>
     </columns>
+  </object>
+  <object class="GtkAction" id="removeAction">
+    <property name="stock_id">gtk-remove</property>
+    <property name="sensitive">False</property>
+    <signal name="activate" handler="on_removeAction_activate" swapped="no"/>
+  </object>
+  <object class="GtkAction" id="removeAllAction">
+    <property name="stock_id">gtk-clear</property>
+    <property name="sensitive">False</property>
+    <signal name="activate" handler="on_removeAllAction_activate" swapped="no"/>
   </object>
   <object class="GtkWindow" id="window">
     <property name="can_focus">False</property>
@@ -270,71 +270,79 @@
           </packing>
         </child>
         <child>
-          <object class="GtkTreeView" id="fileView">
+          <object class="GtkScrolledWindow" id="scrollSupport">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="model">fileStore</property>
-            <property name="headers_clickable">False</property>
-            <property name="search_column">0</property>
+            <property name="hscrollbar_policy">automatic</property>
+            <property name="vscrollbar_policy">automatic</property>
             <child>
-              <object class="GtkTreeViewColumn" id="pathColumn">
-                <property name="resizable">True</property>
-                <property name="title" translatable="yes">Files</property>
-                <property name="expand">True</property>
+              <object class="GtkTreeView" id="fileView">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="model">fileStore</property>
+                <property name="headers_clickable">False</property>
+                <property name="search_column">0</property>
                 <child>
-                  <object class="GtkCellRendererPixbuf" id="fileIconRenderer"/>
-                  <attributes>
-                    <attribute name="icon-name">1</attribute>
-                  </attributes>
-                </child>
-                <child>
-                  <object class="GtkCellRendererText" id="pathRenderer"/>
-                  <attributes>
-                    <attribute name="text">2</attribute>
-                  </attributes>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkTreeViewColumn" id="sizeColumn">
-                <property name="resizable">True</property>
-                <property name="title" translatable="yes">Size</property>
-                <child>
-                  <object class="GtkCellRendererText" id="sizeRenderer">
-                    <property name="xpad">5</property>
-                    <property name="xalign">1</property>
+                  <object class="GtkTreeViewColumn" id="pathColumn">
+                    <property name="resizable">True</property>
+                    <property name="title" translatable="yes">Files</property>
+                    <property name="expand">True</property>
+                    <child>
+                      <object class="GtkCellRendererPixbuf" id="fileIconRenderer"/>
+                      <attributes>
+                        <attribute name="icon-name">1</attribute>
+                      </attributes>
+                    </child>
+                    <child>
+                      <object class="GtkCellRendererText" id="pathRenderer"/>
+                      <attributes>
+                        <attribute name="text">2</attribute>
+                      </attributes>
+                    </child>
                   </object>
-                  <attributes>
-                    <attribute name="text">3</attribute>
-                  </attributes>
                 </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkTreeViewColumn" id="descColumn">
-                <property name="resizable">True</property>
-                <property name="title" translatable="yes">Description</property>
                 <child>
-                  <object class="GtkCellRendererText" id="descRenderer">
-                    <property name="xpad">5</property>
+                  <object class="GtkTreeViewColumn" id="sizeColumn">
+                    <property name="resizable">True</property>
+                    <property name="title" translatable="yes">Size</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="sizeRenderer">
+                        <property name="xpad">5</property>
+                        <property name="xalign">1</property>
+                      </object>
+                      <attributes>
+                        <attribute name="text">3</attribute>
+                      </attributes>
+                    </child>
                   </object>
-                  <attributes>
-                    <attribute name="text">4</attribute>
-                  </attributes>
                 </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkTreeViewColumn" id="charsetColumn">
-                <property name="resizable">True</property>
-                <property name="title" translatable="yes">Charset</property>
                 <child>
-                  <object class="GtkCellRendererText" id="charsetRenderer">
-                    <property name="xpad">5</property>
+                  <object class="GtkTreeViewColumn" id="descColumn">
+                    <property name="resizable">True</property>
+                    <property name="title" translatable="yes">Description</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="descRenderer">
+                        <property name="xpad">5</property>
+                      </object>
+                      <attributes>
+                        <attribute name="text">4</attribute>
+                      </attributes>
+                    </child>
                   </object>
-                  <attributes>
-                    <attribute name="text">5</attribute>
-                  </attributes>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn" id="charsetColumn">
+                    <property name="resizable">True</property>
+                    <property name="title" translatable="yes">Charset</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="charsetRenderer">
+                        <property name="xpad">5</property>
+                      </object>
+                      <attributes>
+                        <attribute name="text">5</attribute>
+                      </attributes>
+                    </child>
+                  </object>
                 </child>
               </object>
             </child>

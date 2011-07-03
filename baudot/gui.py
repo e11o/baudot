@@ -94,13 +94,18 @@ class MainWindow(object):
             self.edit_charset_action.set_sensitive(entry.filepath.isfile())
 
     def on_convertAction_activate(self, data=None):
-        #TODO: show progress dialog
         dst_charset = self.charset_cmb.get_active_text()
         copy_to = None
         if self.dst_cmb.get_active() == 1:
             copy_to = self.dst_chooser.get_filename()
-        self.fm.convert_files(dst_charset, copy_to)
-        #TODO: update files in view
+        cmd = self.fm.convert(dst_charset, copy_to)
+        def on_command_started(cmd):
+            box = ConvertInfoBox(cmd)
+            self.info_area.add(box)
+        cmd.connect("command-started", on_command_started)
+        cmd.start()
+        if self._testing:
+            cmd.join()
 
     def on_addAction_activate(self, data=None):
         chooser = FileFolderChooser()
@@ -142,7 +147,7 @@ class MainWindow(object):
         about.set_copyright("© 2011 - Esteban Sancho")
         about.set_comments("Baudot is an easy to use tool for converting" +
                            " between charsets")
-        about.set_website("http://github.com/drupal4media/baudot")
+        about.set_website("http://github.com/Tiptop/baudot")
         about.run()
         about.destroy()
 
@@ -205,71 +210,17 @@ class FileManager(gobject.GObject):
                                    gobject.TYPE_STRING)
         self._stop = False
 
-    def stop(self):
-        self._stop = True
-        
     def __len__(self):
         return len(self.store)
 
     def clear(self):
         self.store.clear()
 
-    def iter_remove(self, it):
-        return self.store.remove(it)
-
-    def convert_files(self, dst_charset, copy_to=None, callback=None):
-        self._stop = False
-        if copy_to:
-            copy_to = path(copy_to)
-
-        def convert(rows, base_path):
-            if not rows:
-                return
-            for row in rows:
-                entry = FileEntry.from_row(row)
-                src_file = dst_file = entry.filepath
-                if src_file.isfile():
-                    src_charset = entry.charset
-                    if copy_to:
-                        if not base_path:
-                            base_path = src_file.dirname()
-                        dst_file = copy_to / src_file[len(base_path) + 1:]
-                    if dst_file.exists():
-                        self._create_backup(dst_file)
-                    fd, filename = tempfile.mkstemp(prefix="baudot")
-                    os.close(fd)
-                    tmp_file = path(filename)
-                    LOG.debug("Saving file %s with charset %s" %
-                              (tmp_file, dst_charset))
-                    CONVERTER.convert_encoding(src_file,
-                                                  tmp_file,
-                                                  src_charset,
-                                                  dst_charset)
-                    tmp_file.copyfile(dst_file)
-                    tmp_file.remove()
-                else: # isdir
-                    children = row.iterchildren()
-                    if copy_to:
-                        if not base_path:
-                            base_path = src_file
-                        else:
-                            dst_file = copy_to / src_file[len(base_path) + 1:]
-                            dst_file.makedirs()
-                    convert(children, base_path)
-        convert(self.store, None)
+    def convert(self, dst_charset, copy_to=None):
+        return ConvertCommand(self.store, dst_charset, copy_to)
 
     def add(self, filepath):
         return AddFileCommand(self.store, filepath)
-
-    def _create_backup(self, filepath):
-        filepath.copy2(filepath + "~")
-
-    def _normalize(self, filepath):
-        # TODO: remove if not used anymore
-        filepath = path(filepath)
-        if filepath.isdir():
-            filepath = filepath.normpath() + '/'
-        return filepath
 
 class FileCommand(gobject.GObject, Thread):
     
@@ -393,6 +344,74 @@ class AddFileCommand(FileCommand):
         return info.get_content_type()
 
 
+class ConvertCommand(FileCommand):
+    
+    def __init__(self, store, charset, copy_to):
+        super(ConvertCommand, self).__init__(store)
+        self.charset = charset
+        self.copy_to = path(copy_to) if copy_to else None
+        self.total_files = self._count_files()
+        self.converted_files = 0
+    
+    def execute(self):
+        def convert(rows, base_path):
+            if not rows:
+                return
+            for row in rows:
+                entry = FileEntry.from_row(row)
+                src_file = dst_file = entry.filepath
+                if src_file.isfile():
+                    src_charset = entry.charset
+                    if self.copy_to:
+                        if not base_path:
+                            base_path = src_file.dirname()
+                        dst_file = self.copy_to / src_file[len(base_path) + 1:]
+                    if dst_file.exists():
+                        self._create_backup(dst_file)
+                    fd, filename = tempfile.mkstemp(prefix="baudot")
+                    os.close(fd)
+                    tmp_file = path(filename)
+                    LOG.debug("Saving file %s with charset %s" %
+                              (tmp_file, self.charset))
+                    CONVERTER.convert_encoding(src_file,
+                                                  tmp_file,
+                                                  src_charset,
+                                                  self.charset)
+                    tmp_file.copyfile(dst_file)
+                    tmp_file.remove()
+                    self.converted_files += 1
+                    progress = float(self.converted_files) * 100 / self.total_files
+                    self.emit("progress-updated", progress)
+                else: # isdir
+                    children = row.iterchildren()
+                    if self.copy_to:
+                        if not base_path:
+                            base_path = src_file
+                        else:
+                            dst_file = self.copy_to / src_file[len(base_path) + 1:]
+                            dst_file.makedirs()
+                    convert(children, base_path)
+        convert(self.store, None)
+
+    def _count_files(self):
+        def _count(rows):
+            if not rows:
+                return 0
+            count = 0
+            for row in rows:
+                entry = FileEntry.from_row(row)
+                if entry.filepath.isfile():
+                    count += 1
+                else:
+                    count += _count(row.iterchildren())
+            return count
+        
+        return _count(self.store)
+
+    def _create_backup(self, filepath):
+        filepath.copy2(filepath + "~")
+
+
 class InfoBox(gtk.EventBox):
 
     def __init__(self):
@@ -471,6 +490,57 @@ class AddFileInfoBox(InfoBox):
 
     def on_command_aborted(self, cmd, filepath):
         box = ErrorInfoBox("%s is already in workspace" % filepath)
+        self.parent.add(box)
+        
+    def on_command_finished(self, cmd):
+        gobject.idle_add(self.parent.remove, self)
+        
+    def on_progress_updated(self, cmd, progress):
+        gobject.idle_add(self.progress_bar.set_value, progress)
+    
+    def on_close_btn_clicked(self, widget, data=None):
+        self.cmd.stop()
+        gobject.idle_add(self.parent.remove, self)
+    
+
+class ConvertInfoBox(InfoBox):
+    
+    def __init__(self, cmd):
+        super(ConvertInfoBox, self).__init__()
+        
+        cmd.connect("progress-updated", self.on_progress_updated)
+        cmd.connect("command-aborted", self.on_command_aborted)
+        cmd.connect("command-finished", self.on_command_finished)
+        self.cmd = cmd
+        
+        main_box = gtk.VBox()
+        main_box.set_border_width(5)
+
+        upper_box = gtk.HBox(spacing=5)
+        icon = gtk.Image()
+        icon.set_from_stock(gtk.STOCK_CONVERT, gtk.ICON_SIZE_BUTTON)
+        upper_box.pack_start(icon, False, False, 5)
+        self.label = gtk.Label()
+        self.label.set_use_markup(False)
+        self.label.set_text("Converting all files in workspace")
+        upper_box.pack_start(self.label, False)
+        main_box.pack_start(upper_box, False)
+        
+        lower_box = gtk.HBox(spacing=5)
+        alignment = gtk.Alignment(xalign=0.5, yalign=0.5, xscale=1, yscale=0.0)
+        self.progress_bar = gtk.ProgressBar()
+        alignment.add(self.progress_bar)
+        lower_box.pack_start(alignment, expand=True, fill=True)
+        cancel_btn = gtk.Button(stock=gtk.STOCK_CANCEL)
+        cancel_btn.connect("clicked", self.on_close_btn_clicked)
+        lower_box.pack_start(cancel_btn, False)
+        main_box.pack_start(lower_box, False)
+        
+        self.add(main_box)
+        self.show_all()
+
+    def on_command_aborted(self, cmd, filepath):
+        box = ErrorInfoBox("An error ocurred")
         self.parent.add(box)
         
     def on_command_finished(self, cmd):

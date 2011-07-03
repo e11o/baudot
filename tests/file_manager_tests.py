@@ -14,28 +14,6 @@ class FileManagerTest(unittest.TestCase):
         self.fm = FileManager()
         self.samples = path(ResourceManager().resource_filename(__package__, "samples"))
 
-    def test_normalize(self):
-        self.assertEqual("/var/log/", self.fm._normalize("/var/log/"))
-        self.assertEqual("/var/log/", self.fm._normalize("/var/log"))
-        self.assertEqual("/var/log/", self.fm._normalize(path("/var/log/")))
-        self.assertEqual("/var/log/", self.fm._normalize(path("/var/log/")))
-        
-    #===========================================================================
-    # TODO: move to AddFileCommand tests
-    # def test_get_filetype(self):
-    #    file = self.samples / "sample1-ISO-8859-1.txt"
-    #    self.assertEqual("text/plain", self.fm._get_mime_type(file))
-    #===========================================================================
-    
-    #===========================================================================
-    # TODO: move to AddFileCommand tests
-    # def test_count_files(self):
-    #    dir = self.samples / "dir1"
-    #    self.assertEqual(9, self.fm.count_files(dir))
-    #    txt = dir / "sample1-ISO-8859-1.txt"
-    #    self.assertEqual(1, self.fm.count_files(txt))
-    #===========================================================================
-
     def test_add_search(self):
         dir = self.samples / "dir1"
         txt = dir / "sample1-ISO-8859-1.txt"
@@ -107,7 +85,9 @@ class FileManagerTest(unittest.TestCase):
             cmd = self.fm.add(orig)
             cmd.start()
             cmd.join()
-            self.fm.convert_files("ISO-8859-1", copy)
+            cmd = self.fm.convert("ISO-8859-1", copy)
+            cmd.start()
+            cmd.join()
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())
             self.assertEqual("ISO-8859-1", self.converter.detect_encoding(converted).charset)
@@ -123,7 +103,9 @@ class FileManagerTest(unittest.TestCase):
             cmd = self.fm.add(copy)
             cmd.start()
             cmd.join()
-            self.fm.convert_files("ISO-8859-1")
+            cmd = self.fm.convert("ISO-8859-1")
+            cmd.start()
+            cmd.join()
             converted = copy / "sample2-UTF-8.txt"
             self.assertTrue(converted.exists())
             self.assertEqual("ISO-8859-1", self.converter.detect_encoding(converted).charset)
@@ -131,18 +113,3 @@ class FileManagerTest(unittest.TestCase):
             tmp.rmtree()
             self.assertFalse(tmp.exists())
     
-    def test_create_backup(self):
-        tmp = path(tempfile.mkdtemp())
-        try:
-            orig = tmp / "orig.txt"
-            backup = tmp / "orig.txt~"
-            
-            orig.touch()
-            self.assertTrue(orig.exists())
-            self.assertFalse(backup.exists())
-            self.fm._create_backup(orig)
-            self.assertTrue(backup.exists())
-        finally:
-            tmp.rmtree()
-            self.assertFalse(tmp.exists())
-            

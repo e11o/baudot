@@ -1,9 +1,9 @@
-* Show progress dialogs while
-    > Converting encodings
 * Refresh after conversion
 * Cleanup unused code
+* Show welcome screen
 * Create app icon
 * Create verify charset icon
+* CLI unit tests
 * TEST, TEST, TEST in virtualenv
 * Debian package
 * Create user documentation

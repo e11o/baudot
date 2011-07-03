@@ -3,7 +3,7 @@ import gtk
 from pkg_resources import ResourceManager
 from path import path
 
-from baudot.gui import MainWindow, FileManager
+from baudot.gui import MainWindow, FileManager, ConvertCommand
 
 samples = path(ResourceManager().resource_filename(__package__, "samples"))
 
@@ -30,11 +30,12 @@ class CharsetChooserStub(object):
 
 charset= copy_to = None
 class FileManagerStub(FileManager):
-    def convert_files(self, _charset, _copy_to=None, _callback=None):
+    def convert(self, _charset, _copy_to=None, _callback=None):
         #store values in globals
         global charset, copy_to
         charset = _charset
         copy_to = _copy_to
+        return ConvertCommand(None, charset, copy_to)
 
 
 class MainWindowTest(GtkTestCase):
