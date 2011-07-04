@@ -414,7 +414,8 @@ class ConvertCommand(FileCommand):
                             base_path = src_file
                         else:
                             dst_file = self.copy_to / src_file[len(base_path) + 1:]
-                            dst_file.makedirs()
+                            if not dst_file.exists():
+                                dst_file.makedirs()
                     convert(children, base_path)
         convert(self.store, None)
 
