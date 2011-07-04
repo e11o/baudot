@@ -15,12 +15,8 @@ class FileFolderChooser(gtk.Dialog):
         self.chooser = gtk.FileChooserWidget()
         self.chooser.set_select_multiple(True)
         self.chooser.set_show_hidden(True)
-        self.chooser.connect("selection-changed", 
-                             self.on_selection_changed)
         self.chooser.connect("current-folder-changed",
                              self.on_current_folder_changed)
-        self.chooser.connect("file-activated",
-                             self.on_file_activated)
         self.vbox.pack_start(self.chooser, True, True)
 
         default_filter = gtk.FileFilter()
@@ -35,16 +31,9 @@ class FileFolderChooser(gtk.Dialog):
         
         self.show_all()
 
-    def on_file_activated(self, chooser):
-        print "Activado!!!!!"
-
     def on_current_folder_changed(self, chooser):
         chooser.unselect_all()
                        
-    def on_selection_changed(self, chooser):
-        pass
-        #self.ok_btn.set_sensitive(chooser.get_filename() is not None)
-        
     def get_filenames(self):
         return self.chooser.get_filenames()
 

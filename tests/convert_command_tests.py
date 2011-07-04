@@ -11,6 +11,8 @@ class FileManagerTest(unittest.TestCase):
         self.cmd = ConvertCommand(None, None, None)
         self.samples = path(ResourceManager().resource_filename(__package__, "samples"))
 
+    # pylint: disable-msg=W0212
+    # Required for unit tests
     def test_create_backup(self):
         tmp = path(tempfile.mkdtemp())
         try:

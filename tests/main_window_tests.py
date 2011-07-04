@@ -28,14 +28,16 @@ class CharsetChooserStub(object):
         pass
 
 
-charset= copy_to = None
 class FileManagerStub(FileManager):
-    def convert(self, _charset, _copy_to=None, _callback=None):
-        #store values in globals
-        global charset, copy_to
-        charset = _charset
-        copy_to = _copy_to
-        return ConvertCommand(None, charset, copy_to)
+    def __init__(self):
+        super(FileManagerStub, self).__init__()
+        self.charset = None
+        self.copy_to = None
+    
+    def convert(self, charset, copy_to=None):
+        self.charset = charset
+        self.copy_to = copy_to
+        return ConvertCommand(None, None, None)
 
 
 class MainWindowTest(GtkTestCase):
@@ -97,10 +99,10 @@ class MainWindowTest(GtkTestCase):
         win.add_action.activate()
         self.assertTrue(win.convert_action.get_sensitive())
         win.convert_action.activate()
-        self.assertEqual("UTF-8", charset)
-        self.assertIsNone(copy_to)
+        self.assertEqual("UTF-8", win.fm.charset)
+        self.assertIsNone(win.fm.copy_to)
         win.dst_cmb.set_active(1)
         win.charset_cmb.set_active(win.charset_cmb.get_active() + 1)
         win.convert_action.activate()
-        self.assertNotEqual("UTF-8", charset)
-        self.assertIsNotNone(copy_to)
+        self.assertNotEqual("UTF-8", win.fm.charset)
+        self.assertIsNotNone(win.fm.copy_to)

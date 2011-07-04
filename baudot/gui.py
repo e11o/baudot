@@ -73,18 +73,22 @@ class MainWindow(object):
         self.win.set_visible(True)
         self.win.show()
 
-    def on_row_inserted(self, model, path, data=None):
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
+    def on_row_inserted(self, model, tree_path, data=None):
         enabled = len(model) > 0
         self.convert_action.set_sensitive(enabled)
         self.remove_all_action.set_sensitive(enabled)
 
-    def on_row_deleted(self, model, path, data=None):
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
+    def on_row_deleted(self, model, tree_path, data=None):
         enabled = len(model) > 0
         self.convert_action.set_sensitive(enabled)
         self.remove_all_action.set_sensitive(enabled)
 
     def on_selection_changed(self, selection):
-        (model, it) = self.selection.get_selected()
+        (model, it) = selection.get_selected()
         if it is None:
             self.remove_action.set_sensitive(False)
             self.edit_charset_action.set_sensitive(False)
@@ -93,6 +97,8 @@ class MainWindow(object):
             entry = FileEntry.from_iter(model, it)
             self.edit_charset_action.set_sensitive(entry.filepath.isfile())
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_convertAction_activate(self, data=None):
         dst_charset = self.charset_cmb.get_active_text()
         copy_to = None
@@ -107,6 +113,8 @@ class MainWindow(object):
         if self._testing:
             cmd.join()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_addAction_activate(self, data=None):
         chooser = FileFolderChooser()
         if chooser.run() == gtk.RESPONSE_OK:
@@ -124,10 +132,14 @@ class MainWindow(object):
         else:
             chooser.destroy()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_removeAction_activate(self, data=None):
         (model, it) = self.selection.get_selected()
         model.remove(it)
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_editCharsetAction_activate(self, data=None):
         (model, it) = self.selection.get_selected()
         entry = FileEntry.from_iter(model, it)
@@ -137,9 +149,13 @@ class MainWindow(object):
             entry.save(model, it)
         dialog.destroy()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_removeAllAction_activate(self, data=None):
         self.fm.clear()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_aboutMenuItem_activate(self, widget, data=None):
         about = gtk.AboutDialog()
         about.set_program_name("Baudot")
@@ -151,12 +167,18 @@ class MainWindow(object):
         about.run()
         about.destroy()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_dstCmb_changed(self, widget, data=None):
         self.dst_chooser.set_sensitive(widget.get_active() == 1)
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_quitMenuItem_activate(self, widget, data=None):
         gtk.main_quit()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_window_destroy(self, widget, data=None):
         gtk.main_quit()
         
@@ -314,7 +336,6 @@ class AddFileCommand(FileCommand):
                 # only allow text files
                 if "text" in mime.lower():
                     match = CONVERTER.detect_encoding(filepath)
-                    #TODO: check detection confidence
                     charset = match.charset if match else None
                     if filepath.size < 1000:
                         size = "%d B" % filepath.size
@@ -335,14 +356,18 @@ class AddFileCommand(FileCommand):
         filepath = path(filepath)
         count = 1
         if filepath.isdir():
-            for f in filepath.walk():
-                count += 1
+            walker = filepath.walk()
+            try:
+                while walker.next():
+                    count += 1
+            except StopIteration:
+                pass
         return count
 
     def _get_mime_type(self, filepath):
         info = gio.File(filepath).query_info("standard::content-type")
         return info.get_content_type()
-
+    
 
 class ConvertCommand(FileCommand):
     
@@ -448,6 +473,8 @@ class ErrorInfoBox(InfoBox):
         self.add(main_box)
         self.show_all()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_close_btn_clicked(self, widget, data=None):
         gobject.idle_add(self.parent.remove, self)
 
@@ -488,16 +515,24 @@ class AddFileInfoBox(InfoBox):
         self.add(main_box)
         self.show_all()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_command_aborted(self, cmd, filepath):
         box = ErrorInfoBox("%s is already in workspace" % filepath)
         self.parent.add(box)
         
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_command_finished(self, cmd):
         gobject.idle_add(self.parent.remove, self)
         
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_progress_updated(self, cmd, progress):
         gobject.idle_add(self.progress_bar.set_value, progress)
     
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_close_btn_clicked(self, widget, data=None):
         self.cmd.stop()
         gobject.idle_add(self.parent.remove, self)
@@ -539,6 +574,8 @@ class ConvertInfoBox(InfoBox):
         self.add(main_box)
         self.show_all()
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_command_aborted(self, cmd, filepath):
         box = ErrorInfoBox("An error ocurred")
         self.parent.add(box)
@@ -549,6 +586,8 @@ class ConvertInfoBox(InfoBox):
     def on_progress_updated(self, cmd, progress):
         gobject.idle_add(self.progress_bar.set_value, progress)
     
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_close_btn_clicked(self, widget, data=None):
         self.cmd.stop()
         gobject.idle_add(self.parent.remove, self)
@@ -582,6 +621,8 @@ class CharsetChooser(object):
         model = self.charset_cmb.get_model()
         return model.get_value(self.charset_cmb.get_active_iter(), 0)
 
+    # pylint: disable-msg=W0613
+    # Various arguments required by function signatures
     def on_encodingCmb_changed(self, widget, data=None):
         charset = self.get_selected_charset()
         self.set_data(charset)

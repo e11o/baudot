@@ -4,6 +4,7 @@
 * Create app icon
 * Create verify charset icon
 * CLI unit tests
+* Improving code documentation
 * TEST, TEST, TEST in virtualenv
 * Debian package
 * Create user documentation

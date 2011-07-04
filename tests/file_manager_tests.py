@@ -15,24 +15,24 @@ class FileManagerTest(unittest.TestCase):
         self.samples = path(ResourceManager().resource_filename(__package__, "samples"))
 
     def test_add_search(self):
-        dir = self.samples / "dir1"
-        txt = dir / "sample1-ISO-8859-1.txt"
-        image = dir / "locked.svg"
-        empty = dir / "empty"
+        dir1 = self.samples / "dir1"
+        txt = dir1 / "sample1-ISO-8859-1.txt"
+        image = dir1 / "locked.svg"
+        empty = dir1 / "empty"
 
         self.assertEqual(0, len(self.fm))
-        cmd = self.fm.add(dir)
+        cmd = self.fm.add(dir1)
         cmd.start()
         cmd.join()
 
         self.assertEqual(1, len(self.fm))
 
-        dir_row = cmd.search(dir)
+        dir_row = cmd.search(dir1)
         self.assertIsNotNone(dir_row)
-        self.assertEqual(6, len(dir.listdir()))
-        self.assertEqual(dir, dir_row[0])
+        self.assertEqual(6, len(dir1.listdir()))
+        self.assertEqual(dir1, dir_row[0])
         self.assertEqual(gtk.STOCK_DIRECTORY, dir_row[1])
-        self.assertEqual(dir, dir_row[2])
+        self.assertEqual(dir1, dir_row[2])
         self.assertEqual("4 items", dir_row[3])
         self.assertEqual("Folder", dir_row[4])
         self.assertIsNone(dir_row[5])
@@ -59,22 +59,18 @@ class FileManagerTest(unittest.TestCase):
         self.assertEqual(2, len(self.fm))
 
     def test_add_duplicate(self):
-        dir = self.samples / "dir1"
+        dir1 = self.samples / "dir1"
         self.assertEqual(0, len(self.fm))
-        cmd = self.fm.add(dir)
+        cmd = self.fm.add(dir1)
         cmd.start()
         cmd.join()
         self.assertEqual(1, len(self.fm))
-        class Namespace(object): pass
-        ns = Namespace()
-        ns.duplicated = False
-        def on_command_aborted(cmd, msg):
-            ns.duplicated = True
-        cmd = self.fm.add(dir)
-        cmd.connect("command-aborted", on_command_aborted)
+        mock = MockListener()
+        cmd = self.fm.add(dir1)
+        cmd.connect("command-aborted", mock.slot)
         cmd.start()
         cmd.join()
-        self.assertTrue(ns.duplicated) 
+        self.assertTrue(mock.invoked) 
         self.assertEqual(1, len(self.fm))
 
     def test_convert_copy(self):
@@ -112,4 +108,15 @@ class FileManagerTest(unittest.TestCase):
         finally:
             tmp.rmtree()
             self.assertFalse(tmp.exists())
+
+
+class MockListener(object):
+    def __init__(self):
+        self.args = None
+        self.invoked = False
+        
+    def slot(self, *args):
+        self.args = args
+        self.invoked = True
+            
     
